@@ -1,3 +1,3 @@
-export * from './cognito-client';
-export * from './error';
-export * from './session-storage';
+export * from './cognito-client.js';
+export * from './error.js';
+export * from './session-storage/index.js';

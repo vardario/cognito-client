@@ -3,8 +3,8 @@ import { sha256 } from 'hash.js';
 import { BigInteger } from 'jsbn';
 import randomBytes from 'randombytes';
 
-import { AuthError, AuthException, CognitoAuthErrorResponse, getAuthError } from './error';
-import { SessionStorage } from './session-storage';
+import { AuthError, AuthException, CognitoAuthErrorResponse, getAuthError } from './error.js';
+import { SessionStorage } from './session-storage/index.js';
 
 import {
   calculateSignature,
@@ -13,7 +13,7 @@ import {
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
-} from './utils';
+} from './utils.js';
 
 export interface UserAttribute {
   Name: string;

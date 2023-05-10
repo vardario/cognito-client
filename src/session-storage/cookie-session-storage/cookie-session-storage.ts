@@ -1,6 +1,6 @@
 import { CookieProps, Cookies } from '@vardario/cookies';
-import { Session } from '../../cognito-client';
-import { OAuthVerificationParams, SessionStorage } from '../session-storage';
+import { Session } from '../../cognito-client.js';
+import { OAuthVerificationParams, SessionStorage } from '../session-storage.js';
 
 export interface CookieSessionStorageProps extends CookieProps {
   cookieName: string;
