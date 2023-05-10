@@ -1,54 +1,54 @@
-import {
+const {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   AttributeDataType,
   CognitoIdentityProviderClient,
   CreateUserPoolClientCommand,
   CreateUserPoolCommand,
-} from '@aws-sdk/client-cognito-identity-provider';
+} = await import("@aws-sdk/client-cognito-identity-provider");
 
-import { JSDOM } from 'jsdom';
+import { JSDOM } from "jsdom";
 
 export const user = {
-  email: 'sahin@test.com',
-  password: 'password',
-  givenName: 'Sahin',
-  familyName: 'Sahin',
+  email: "sahin@test.com",
+  password: "password",
+  givenName: "Sahin",
+  familyName: "Sahin",
 };
 
 export const newUser = {
-  email: 'john@test.com',
-  password: 'password',
-  givenName: 'John',
-  familyName: 'John',
+  email: "john@test.com",
+  password: "password",
+  givenName: "John",
+  familyName: "John",
 };
 
 export async function setupCognito(endpoint: string) {
   const awsCognitoClient = new CognitoIdentityProviderClient({
     endpoint: endpoint,
     credentials: {
-      accessKeyId: 'test',
-      secretAccessKey: 'test',
+      accessKeyId: "test",
+      secretAccessKey: "test",
     },
-    region: 'eu-central-1',
+    region: "eu-central-1",
   });
 
   const createPoolResult = await awsCognitoClient.send(
     new CreateUserPoolCommand({
-      PoolName: 'TestPool',
+      PoolName: "TestPool",
       Schema: [
         {
-          Name: 'email',
+          Name: "email",
           AttributeDataType: AttributeDataType.STRING,
           Required: true,
         },
         {
-          Name: 'givenName',
+          Name: "givenName",
           AttributeDataType: AttributeDataType.STRING,
           Required: true,
         },
         {
-          Name: 'familyName',
+          Name: "familyName",
           AttributeDataType: AttributeDataType.STRING,
           Required: true,
         },
@@ -58,7 +58,7 @@ export async function setupCognito(endpoint: string) {
 
   const createUserPoolClientResult = await awsCognitoClient.send(
     new CreateUserPoolClientCommand({
-      ClientName: 'TestClient',
+      ClientName: "TestClient",
       UserPoolId: createPoolResult.UserPool?.Id,
     })
   );
@@ -67,14 +67,14 @@ export async function setupCognito(endpoint: string) {
     new AdminCreateUserCommand({
       UserPoolId: createPoolResult.UserPool?.Id,
       Username: user.email,
-      MessageAction: 'SUPPRESS',
+      MessageAction: "SUPPRESS",
       UserAttributes: [
         {
-          Name: 'givenName',
+          Name: "givenName",
           Value: user.givenName,
         },
         {
-          Name: 'familyName',
+          Name: "familyName",
           Value: user.familyName,
         },
       ],
@@ -92,13 +92,14 @@ export async function setupCognito(endpoint: string) {
 
   return {
     userPoolId: createPoolResult.UserPool?.Id as string,
-    userPoolClientId: createUserPoolClientResult.UserPoolClient?.ClientId as string,
+    userPoolClientId: createUserPoolClientResult.UserPoolClient
+      ?.ClientId as string,
   };
 }
 
 export function setupJsDom() {
-  const dom = new JSDOM('', {
-    url: 'http://localhost',
+  const dom = new JSDOM("", {
+    url: "http://localhost",
   });
   global.document = dom.window.document;
   global.window = dom.window as any;

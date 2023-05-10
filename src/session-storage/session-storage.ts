@@ -1,4 +1,4 @@
-import { Session } from '../cognito-client';
+import { Session } from '../cognito-client.js';
 
 export interface OAuthVerificationParams {
   pkce: string;

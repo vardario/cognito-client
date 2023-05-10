@@ -1,5 +1,5 @@
-import { Session } from '../cognito-client';
-import { OAuthVerificationParams, SessionStorage } from './session-storage';
+import { Session } from '../cognito-client.js';
+import { OAuthVerificationParams, SessionStorage } from './session-storage.js';
 
 export interface LocalStorageSessionStorageProps {
   storageName: string;

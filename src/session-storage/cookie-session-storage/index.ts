@@ -1,1 +1,1 @@
-export * from './cookie-session-storage';
+export * from './cookie-session-storage.js';
