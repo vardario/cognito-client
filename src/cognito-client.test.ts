@@ -113,13 +113,14 @@ describe("Cognito Client", () => {
     ).rejects.toThrow();
     await cognitoClient.authenticateUser(user.email, "newPassword");
   });
-  test("generateOAuthSignInUrl", () => {
-    const _test = (
+  test("generateOAuthSignInUrl", async () => {
+    const _test = async (
       cb: (searchParams: URLSearchParams) => void,
       identityProvider?: CognitoIdentityProvider
     ) => {
-      const hostedUIUrl =
-        cognitoClient.generateOAuthSignInUrl(identityProvider);
+      const hostedUIUrl = await cognitoClient.generateOAuthSignInUrl(
+        identityProvider
+      );
       const { searchParams } = new URL(hostedUIUrl);
 
       expect(searchParams.get("redirect_uri")).toBe(oAuth2.redirectUrl);
@@ -135,11 +136,11 @@ describe("Cognito Client", () => {
       cb(searchParams);
     };
 
-    _test((searchParams: URLSearchParams) => {
+    await _test((searchParams: URLSearchParams) => {
       expect(searchParams.get("identity_provider")).toBeNull();
     });
 
-    _test((searchParams: URLSearchParams) => {
+    await _test((searchParams: URLSearchParams) => {
       expect(searchParams.get("identity_provider")).toBe(
         CognitoIdentityProvider.Apple
       );
