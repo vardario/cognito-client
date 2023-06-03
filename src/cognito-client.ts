@@ -1,6 +1,7 @@
 import { addSeconds } from "date-fns";
 import hashJs from "hash.js";
 import { BigInteger } from "jsbn";
+import { Buffer } from "buffer";
 
 import {
   AuthError,

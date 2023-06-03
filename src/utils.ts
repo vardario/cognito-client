@@ -1,6 +1,7 @@
 import formatInTimeZone from "date-fns-tz/formatInTimeZone";
 import hashJs from "hash.js";
 import { BigInteger } from "jsbn";
+import { Buffer } from "buffer";
 
 const initN =
   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
