@@ -1,7 +1,7 @@
 import formatInTimeZone from "date-fns-tz/formatInTimeZone";
 import hashJs from "hash.js";
 import { BigInteger } from "jsbn";
-import { Buffer } from "buffer";
+import rb from "randombytes";
 
 const initN =
   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
@@ -173,12 +173,5 @@ export function decodeJwt<T = unknown>(jwt: string) {
 }
 
 export async function randomBytes(num: number) {
-  if (globalThis.window) {
-    const bytes = new Uint8Array(num);
-    window.crypto.getRandomValues(bytes);
-    return Buffer.from(bytes);
-  } else {
-    const { randomBytes } = await import("node:crypto");
-    return randomBytes(num);
-  }
+  return rb(num);
 }
