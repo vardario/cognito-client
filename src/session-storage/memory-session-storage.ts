@@ -1,26 +1,16 @@
-import { Session } from '../cognito-client.js';
-import { OAuthVerificationParams, SessionStorage } from './session-storage.js';
+import { Session } from "../cognito-client.js";
+import { ISessionStorage } from "./session-storage.js";
 
-/**
- * In-memory based session storage. Useful for testing.
- */
-export class MemorySessionStorage extends SessionStorage {
-  private session?: Session;
-  private oAuthVerificationParams?: OAuthVerificationParams;
+export class MemorySessionStorage extends ISessionStorage {
+  private session: Session | undefined;
 
-  getSession() {
-    return this.session;
+  async getSession(): Promise<Session | undefined> {
+    if (!this.session) {
+      return undefined;
+    }
+    return this.refreshSession(this.session);
   }
-
-  setSession(session: Session | undefined) {
+  setSession(session: Session | undefined): void {
     this.session = session;
-  }
-
-  getOauthVerificationParams(): OAuthVerificationParams | undefined {
-    return this.oAuthVerificationParams;
-  }
-
-  setOauthVerificationParams(oAuthParams: OAuthVerificationParams): void {
-    this.oAuthVerificationParams = oAuthParams;
   }
 }

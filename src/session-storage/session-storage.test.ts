@@ -1,43 +1,62 @@
 import { randomBytes } from "crypto";
-import { Session } from "../cognito-client.js";
-import { setupJsDom } from "../test-utils.js";
-import { CookieSessionStorage } from "./cookie-session-storage/index.js";
-import { LocalStorageSessionStorage } from "./local-storage-session-storage.js";
+import { CognitoClient, Session } from "../cognito-client.js";
+import { setupCognito, setupJsDom, user } from "../test-utils.js";
 import { MemorySessionStorage } from "./memory-session-storage.js";
-import { OAuthVerificationParams } from "./session-storage.js";
-import { expect, test } from "vitest";
+import { expect, test, describe, beforeAll, afterAll } from "vitest";
+import { GenericContainer, StartedTestContainer } from "testcontainers";
+import { CookieSessionStorage } from "./cookie-session-storage.js";
 
-setupJsDom();
+describe("SessionStorage", () => {
+  setupJsDom();
 
-const sessionStorages = [
-  new MemorySessionStorage(),
-  new LocalStorageSessionStorage({ storageName: "session" }),
-  new CookieSessionStorage({
-    domain: "localhost",
-    cookieName: "session",
-  }),
-];
+  let cognitoClient: CognitoClient;
+  let container: StartedTestContainer;
+  let session: Session;
 
-const session: Session = {
-  accessToken: randomBytes(128).toString("base64"),
-  expiresIn: 600,
-  idToken: randomBytes(128).toString("base64"),
-  refreshToken: randomBytes(128).toString("base64"),
-};
+  beforeAll(async () => {
+    const cognitoPort = 9229;
+    container = await new GenericContainer("jagregory/cognito-local")
+      .withExposedPorts(cognitoPort)
+      .start();
+    const cognitoEndpoint = `http://localhost:${container.getMappedPort(
+      cognitoPort
+    )}`;
 
-const oAuthVerificationParams: OAuthVerificationParams = {
-  pkce: randomBytes(128).toString("base64"),
-  state: randomBytes(128).toString("base64"),
-};
+    const userPoolConfig = await setupCognito(cognitoEndpoint);
 
-test("SessionStorage", () => {
-  sessionStorages.forEach((sessionStorage) => {
-    sessionStorage.setSession(session);
-    expect(sessionStorage.getSession()).toStrictEqual(session);
+    cognitoClient = new CognitoClient({
+      userPoolId: userPoolConfig.userPoolId,
+      userPoolClientId: userPoolConfig.userPoolClientId,
+      endpoint: cognitoEndpoint,
+    });
 
-    sessionStorage.setOauthVerificationParams(oAuthVerificationParams);
-    expect(sessionStorage.getOauthVerificationParams()).toStrictEqual(
-      oAuthVerificationParams
-    );
+    session = await cognitoClient.authenticateUser(user.email, user.password);
+  });
+
+  afterAll(async () => {
+    await container.stop();
+  });
+
+  test("MemorySessionStorage", async () => {
+    const memorySessionStorage = new MemorySessionStorage(cognitoClient);
+    memorySessionStorage.setSession(session);
+    const expectedSession = await memorySessionStorage.getSession();
+    expect(expectedSession).toBe(session);
+
+    memorySessionStorage.setSession(undefined);
+
+    expect(await memorySessionStorage.getSession()).toBeUndefined();
+  });
+
+  test("CookieSessionStorage", async () => {
+    const cookieSessionStorage = new CookieSessionStorage(cognitoClient, {
+      cookieName: "session",
+    });
+    cookieSessionStorage.setSession(session);
+    const expectedSession = await cookieSessionStorage.getSession();
+    expect(expectedSession).toStrictEqual(session);
+
+    cookieSessionStorage.setSession(undefined);
+    expect(await cookieSessionStorage.getSession()).toBeUndefined();
   });
 });

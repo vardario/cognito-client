@@ -4,8 +4,8 @@ import {
   CognitoClient,
   CognitoIdentityProvider,
   OAuth2Props,
+  Session,
 } from "./cognito-client.js";
-import { MemorySessionStorage } from "./session-storage/index.js";
 import { newUser, setupCognito, user } from "./test-utils.js";
 import {
   expect,
@@ -19,7 +19,6 @@ import {
 describe("Cognito Client", () => {
   let cognitoClient: CognitoClient;
   let container: StartedTestContainer;
-  let sessionStorage = new MemorySessionStorage();
 
   const oAuth2: OAuth2Props = {
     cognitoDomain: "http://localhost",
@@ -32,6 +31,8 @@ describe("Cognito Client", () => {
     userPoolClientId: "",
     userPoolId: "",
   };
+
+  let session: Session;
 
   beforeAll(async () => {
     const cognitoPort = 9229;
@@ -47,37 +48,16 @@ describe("Cognito Client", () => {
     cognitoClient = new CognitoClient({
       userPoolId: userPoolConfig.userPoolId,
       userPoolClientId: userPoolConfig.userPoolClientId,
-      sessionStorage: sessionStorage,
+
       endpoint: cognitoEndpoint,
       oAuth2: oAuth2,
     });
-  });
 
-  beforeEach(async () => {
-    try {
-      await cognitoClient.signOut();
-    } catch (error) {}
+    session = await cognitoClient.authenticateUser(user.email, user.password);
   });
 
   afterAll(async () => {
     await container.stop();
-  });
-
-  test("authenticateUser", async () => {
-    const session = await cognitoClient.authenticateUser(
-      user.email,
-      user.password
-    );
-    expect(session).toEqual(await cognitoClient.getSession());
-
-    //Simulate session expiring
-    sessionStorage.setSession({
-      ...session,
-      expiresIn: 0,
-    });
-
-    const newSession = await cognitoClient.getSession();
-    expect(newSession).not.toEqual(session);
   });
 
   test("authenticateUserSrp: TODO", async () => {
@@ -103,25 +83,33 @@ describe("Cognito Client", () => {
   test("changePassword", async () => {
     const newPassword = "newPassword";
     expect(
-      cognitoClient.changePassword(user.password, newPassword)
+      cognitoClient.authenticateUser(user.email, newPassword)
     ).rejects.toThrow();
-    await cognitoClient.authenticateUser(user.email, user.password);
-    await cognitoClient.changePassword(user.password, newPassword);
-    await cognitoClient.signOut();
+
+    const session = await cognitoClient.authenticateUser(
+      user.email,
+      user.password
+    );
+    await cognitoClient.changePassword(
+      user.password,
+      newPassword,
+      session.accessToken
+    );
+    await cognitoClient.signOut(session.refreshToken);
     expect(
       cognitoClient.authenticateUser(user.email, user.password)
     ).rejects.toThrow();
-    await cognitoClient.authenticateUser(user.email, "newPassword");
+    await cognitoClient.authenticateUser(user.email, newPassword);
   });
   test("generateOAuthSignInUrl", async () => {
     const _test = async (
       cb: (searchParams: URLSearchParams) => void,
       identityProvider?: CognitoIdentityProvider
     ) => {
-      const hostedUIUrl = await cognitoClient.generateOAuthSignInUrl(
+      const { url, state, pkce } = await cognitoClient.generateOAuthSignInUrl(
         identityProvider
       );
-      const { searchParams } = new URL(hostedUIUrl);
+      const { searchParams } = new URL(url);
 
       expect(searchParams.get("redirect_uri")).toBe(oAuth2.redirectUrl);
       expect(searchParams.get("response_type")).toBe(oAuth2.responseType);
@@ -129,7 +117,7 @@ describe("Cognito Client", () => {
         userPoolConfig.userPoolClientId
       );
       expect(searchParams.get("scope")).toBe(oAuth2.scopes.join(" "));
-      expect(searchParams.get("state")).toBeDefined();
+      expect(searchParams.get("state")).toBe(state);
       expect(searchParams.get("code_challenge")).toBeDefined();
       expect(searchParams.get("code_challenge_method")).toBe("S256");
 

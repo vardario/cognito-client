@@ -1,16 +1,19 @@
-import { Session } from '../cognito-client.js';
+import { CognitoClient, Session } from "../cognito-client.js";
 
-export interface OAuthVerificationParams {
-  pkce: string;
-  state: string;
-}
+export abstract class ISessionStorage {
+  constructor(protected client: CognitoClient) {}
 
-/**
- * Session storage interface class.
- */
-export abstract class SessionStorage {
-  abstract getSession(): Session | undefined;
+  protected async refreshSession(session: Session) {
+    if (session && new Date().getTime() >= session.expiresIn) {
+      try {
+        return this.client.refreshSession(session.refreshToken);
+      } catch (error) {
+        return undefined;
+      }
+    }
+    return session;
+  }
+
+  abstract getSession(): Promise<Session | undefined>;
   abstract setSession(session: Session | undefined): void;
-  abstract setOauthVerificationParams(oAuthParams: OAuthVerificationParams): void;
-  abstract getOauthVerificationParams(): OAuthVerificationParams | undefined;
 }
