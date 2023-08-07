@@ -7,13 +7,13 @@ import { GenericContainer, StartedTestContainer } from "testcontainers";
 import { CookieSessionStorage } from "./cookie-session-storage.js";
 
 describe("SessionStorage", () => {
-  setupJsDom();
-
   let cognitoClient: CognitoClient;
   let container: StartedTestContainer;
   let session: Session;
 
   beforeAll(async () => {
+    setupJsDom();
+
     const cognitoPort = 9229;
     container = await new GenericContainer("jagregory/cognito-local")
       .withExposedPorts(cognitoPort)
