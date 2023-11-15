@@ -1,9 +1,7 @@
-import { addSeconds } from "date-fns";
-import hashJs from "hash.js";
-import { BigInteger } from "jsbn";
-import { Buffer } from "buffer";
-
-import { CognitoException, CognitoError } from "./error.js";
+import hashJs from 'hash.js';
+import { BigInteger } from 'jsbn';
+import { Buffer } from 'buffer';
+import { CognitoError, CognitoException } from './error.js';
 
 import {
   calculateSignature,
@@ -12,8 +10,8 @@ import {
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
-  randomBytes,
-} from "./utils.js";
+  randomBytes
+} from './utils.js';
 
 export interface UserAttribute {
   Name: string;
@@ -43,7 +41,7 @@ export interface OAuth2Props {
   /**
    * Response type.
    */
-  responseType: "code";
+  responseType: 'code';
 }
 
 export interface CognitoClientProps {
@@ -98,17 +96,16 @@ export interface Session {
 /**
  * Represents the decoded values from a JWT ID token.
  */
-export interface IdToken
-  extends Record<string, string | string[] | number | boolean> {
-  "cognito:username": string;
-  "cognito:groups": string[];
+export interface IdToken extends Record<string, string | string[] | number | boolean> {
+  'cognito:username': string;
+  'cognito:groups': string[];
   email_verified: boolean;
   email: string;
   iss: string;
   origin_jti: string;
   aud: string;
   event_id: string;
-  token_use: "id";
+  token_use: 'id';
   auth_time: number;
   exp: number;
   iat: number;
@@ -116,8 +113,7 @@ export interface IdToken
   sub: string;
 }
 
-export interface AccessToken
-  extends Record<string, string | string[] | number | boolean> {
+export interface AccessToken extends Record<string, string | string[] | number | boolean> {
   auth_time: number;
   client_id: string;
   event_id: string;
@@ -128,7 +124,7 @@ export interface AccessToken
   origin_jti: string;
   scope: string;
   sub: string;
-  token_use: "access";
+  token_use: 'access';
   username: string;
 }
 
@@ -142,17 +138,17 @@ export interface DecodedTokens {
  * @see https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_Operations.html for more details
  */
 export enum CognitoServiceTarget {
-  InitiateAuth = "InitiateAuth",
-  RespondToAuthChallenge = "RespondToAuthChallenge",
-  SignUp = "SignUp",
-  ConfirmSignUp = "ConfirmSignUp",
-  ChangePassword = "ChangePassword",
-  RevokeToken = "RevokeToken",
-  ForgotPassword = "ForgotPassword",
-  ConfirmForgotPassword = "ConfirmForgotPassword",
-  ResendConfirmationCode = "ResendConfirmationCode",
-  UpdateUserAttributes = "UpdateUserAttributes",
-  VerifyUserAttribute = "VerifyUserAttribute",
+  InitiateAuth = 'InitiateAuth',
+  RespondToAuthChallenge = 'RespondToAuthChallenge',
+  SignUp = 'SignUp',
+  ConfirmSignUp = 'ConfirmSignUp',
+  ChangePassword = 'ChangePassword',
+  RevokeToken = 'RevokeToken',
+  ForgotPassword = 'ForgotPassword',
+  ConfirmForgotPassword = 'ConfirmForgotPassword',
+  ResendConfirmationCode = 'ResendConfirmationCode',
+  UpdateUserAttributes = 'UpdateUserAttributes',
+  VerifyUserAttribute = 'VerifyUserAttribute'
 }
 
 /**
@@ -160,11 +156,11 @@ export enum CognitoServiceTarget {
  * @see https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-identity.html for more information.
  */
 export enum CognitoIdentityProvider {
-  Cognito = "COGNITO",
-  Google = "Google",
-  Facebook = "Facebook",
-  Amazon = "LoginWithAmazon",
-  Apple = "SignInWithApple",
+  Cognito = 'COGNITO',
+  Google = 'Google',
+  Facebook = 'Facebook',
+  Amazon = 'LoginWithAmazon',
+  Apple = 'SignInWithApple'
 }
 
 export interface AuthenticationResult {
@@ -180,7 +176,7 @@ export interface AuthenticationResponse {
 }
 
 export interface ChallengeResponse {
-  ChallengeName: "PASSWORD_VERIFIER";
+  ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeParameters: {
     SALT: string;
     SECRET_BLOCK: string;
@@ -200,17 +196,9 @@ export class CognitoClient {
 
   private readonly oAuth?: OAuth2Props;
 
-  constructor({
-    userPoolId,
-    userPoolClientId,
-    endpoint,
-
-    oAuth2: oAuth,
-  }: CognitoClientProps) {
-    const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split("_");
-    this.cognitoEndpoint = (
-      endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`
-    ).replace(/\/$/, "");
+  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth }: CognitoClientProps) {
+    const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split('_');
+    this.cognitoEndpoint = (endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`).replace(/\/$/, '');
     this.cognitoPoolName = cognitoPoolName;
     this.userPoolClientId = userPoolClientId;
     this.oAuth = oAuth;
@@ -218,52 +206,39 @@ export class CognitoClient {
 
   static getDecodedTokenFromSession(session: Session): DecodedTokens {
     const { payload: idToken } = decodeJwt<IdToken>(session.idToken);
-    const { payload: accessToken } = decodeJwt<AccessToken>(
-      session.accessToken
-    );
+    const { payload: accessToken } = decodeJwt<AccessToken>(session.accessToken);
     return {
       idToken,
-      accessToken,
+      accessToken
     };
   }
 
-  private async cognitoRequest(
-    body: object,
-    serviceTarget: CognitoServiceTarget
-  ) {
+  private async cognitoRequest(body: object, serviceTarget: CognitoServiceTarget) {
     const cognitoResponse = await fetch(this.cognitoEndpoint, {
       headers: {
-        "x-amz-target": `AWSCognitoIdentityProviderService.${serviceTarget}`,
-        "content-type": "application/x-amz-json-1.1",
+        'x-amz-target': `AWSCognitoIdentityProviderService.${serviceTarget}`,
+        'content-type': 'application/x-amz-json-1.1'
       },
-      method: "POST",
-      body: JSON.stringify(body),
+      method: 'POST',
+      body: JSON.stringify(body)
     });
 
     if (cognitoResponse.status < 200 || cognitoResponse.status > 299) {
-      const errorMessage =
-        cognitoResponse.headers.get("X-Amzn-ErrorMessage") ?? "Unknown";
-      const errorType =
-        cognitoResponse.headers.get("X-Amzn-ErrorType") ??
-        CognitoException.Unknown;
+      const errorMessage = cognitoResponse.headers.get('X-Amzn-ErrorMessage') ?? 'Unknown';
+      const cognitoException = cognitoResponse.headers.get('X-Amzn-ErrorType') ?? CognitoException.Unknown;
 
-      throw new CognitoError(errorMessage, errorType as CognitoException);
+      throw new CognitoError(errorMessage, cognitoException as CognitoException);
     }
 
     return cognitoResponse.json();
   }
 
-  private static authResultToSession(
-    authenticationResult: AuthenticationResult
-  ): Session {
+  private static authResultToSession(authenticationResult: AuthenticationResult): Session {
     return {
       accessToken: authenticationResult.AccessToken,
       idToken: authenticationResult.IdToken,
-      expiresIn: addSeconds(
-        new Date(),
-        authenticationResult.ExpiresIn
-      ).getTime(),
-      refreshToken: authenticationResult.RefreshToken,
+      expiresIn: new Date().getMilliseconds() / 1000 + authenticationResult.ExpiresIn,
+      refreshToken: authenticationResult.RefreshToken
     };
   }
 
@@ -274,23 +249,20 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
-  async authenticateUserSrp(
-    username: string,
-    password: string
-  ): Promise<Session> {
+  async authenticateUserSrp(username: string, password: string): Promise<Session> {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
     const initiateAuthPayload = {
-      AuthFlow: "USER_SRP_AUTH",
+      AuthFlow: 'USER_SRP_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
         USERNAME: username,
-        SRP_A: A.toString(16),
+        SRP_A: A.toString(16)
       },
-      ClientMetadata: {},
+      ClientMetadata: {}
     };
 
     const challenge = (await this.cognitoRequest(
@@ -320,15 +292,15 @@ export class CognitoClient {
     );
 
     const respondToAuthChallengePayload = {
-      ChallengeName: "PASSWORD_VERIFIER",
+      ChallengeName: 'PASSWORD_VERIFIER',
       ClientId: this.userPoolClientId,
       ChallengeResponses: {
         PASSWORD_CLAIM_SECRET_BLOCK: challenge.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
         USERNAME: challenge.ChallengeParameters.USER_ID_FOR_SRP,
-        TIMESTAMP: timeStamp,
+        TIMESTAMP: timeStamp
       },
-      ClientMetadata: {},
+      ClientMetadata: {}
     };
 
     const { AuthenticationResult } = await this.cognitoRequest(
@@ -336,9 +308,7 @@ export class CognitoClient {
       CognitoServiceTarget.RespondToAuthChallenge
     );
 
-    const session = CognitoClient.authResultToSession(AuthenticationResult);
-
-    return session;
+    return CognitoClient.authResultToSession(AuthenticationResult);
   }
 
   /**
@@ -348,17 +318,17 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
     const initiateAuthPayload = {
-      AuthFlow: "USER_PASSWORD_AUTH",
+      AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
         USERNAME: username,
-        PASSWORD: password,
+        PASSWORD: password
       },
-      ClientMetadata: {},
+      ClientMetadata: {}
     };
 
     const { AuthenticationResult } = (await this.cognitoRequest(
@@ -370,16 +340,21 @@ export class CognitoClient {
     return session;
   }
 
-  public async refreshSession(
-    refreshToken: string
-  ): Promise<Session | undefined> {
+  /**
+   * Returns a new session based on the given refresh token.
+   *
+   * @param refreshToken
+   * @returns @see Session
+   * @throws {CognitoError}
+   */
+  public async refreshSession(refreshToken: string): Promise<Session> {
     const refreshTokenPayload = {
-      AuthFlow: "REFRESH_TOKEN_AUTH",
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
-        REFRESH_TOKEN: refreshToken,
+        REFRESH_TOKEN: refreshToken
       },
-      ClientMetadata: {},
+      ClientMetadata: {}
     };
 
     const { AuthenticationResult } = (await this.cognitoRequest(
@@ -399,28 +374,21 @@ export class CognitoClient {
    * @param username Username
    * @param password Password
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
-  async signUp(
-    username: string,
-    password: string,
-    userAttributes?: UserAttribute[]
-  ) {
+  async signUp(username: string, password: string, userAttributes?: UserAttribute[]) {
     const signUpPayload = {
       ClientId: this.userPoolClientId,
       Username: username,
       Password: password,
-      UserAttributes: userAttributes,
+      UserAttributes: userAttributes
     };
 
-    const data = await this.cognitoRequest(
-      signUpPayload,
-      CognitoServiceTarget.SignUp
-    );
+    const data = await this.cognitoRequest(signUpPayload, CognitoServiceTarget.SignUp);
 
     return {
       id: data.UserSub as string,
-      confirmed: data.UserConfirmed as boolean,
+      confirmed: data.UserConfirmed as boolean
     };
   }
 
@@ -430,19 +398,16 @@ export class CognitoClient {
    * @param username Username
    * @param code Confirmation code the user gets through the registration E-Mail
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
   async confirmSignUp(username: string, code: string) {
     const confirmSignUpPayload = {
       ClientId: this.userPoolClientId,
       ConfirmationCode: code,
-      Username: username,
+      Username: username
     };
 
-    const result = await this.cognitoRequest(
-      confirmSignUpPayload,
-      CognitoServiceTarget.ConfirmSignUp
-    );
+    await this.cognitoRequest(confirmSignUpPayload, CognitoServiceTarget.ConfirmSignUp);
   }
 
   /**
@@ -450,90 +415,64 @@ export class CognitoClient {
    * @param currentPassword Current user password.
    * @param newPassword  New user password.
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
-  async changePassword(
-    currentPassword: string,
-    newPassword: string,
-    accessToken: string
-  ) {
+  async changePassword(currentPassword: string, newPassword: string, accessToken: string) {
     const changePasswordPayload = {
       PreviousPassword: currentPassword,
       ProposedPassword: newPassword,
-      AccessToken: accessToken,
+      AccessToken: accessToken
     };
 
-    const result = await this.cognitoRequest(
-      changePasswordPayload,
-      CognitoServiceTarget.ChangePassword
-    );
+    await this.cognitoRequest(changePasswordPayload, CognitoServiceTarget.ChangePassword);
   }
 
-  async updateUserAttributes(
-    userAttributes: UserAttribute[],
-    accessToken: string
-  ) {
+  async updateUserAttributes(userAttributes: UserAttribute[], accessToken: string) {
     const updateUserAttributesPayload = {
       UserAttributes: userAttributes,
-      AccessToken: accessToken,
+      AccessToken: accessToken
     };
 
-    const result = await this.cognitoRequest(
-      updateUserAttributesPayload,
-      CognitoServiceTarget.UpdateUserAttributes
-    );
+    await this.cognitoRequest(updateUserAttributesPayload, CognitoServiceTarget.UpdateUserAttributes);
   }
 
-  async verifyUserAttribute(
-    attributeName: string,
-    code: string,
-    accessToken: string
-  ) {
+  async verifyUserAttribute(attributeName: string, code: string, accessToken: string) {
     const verifyUserAttributePayload = {
       AttributeName: attributeName,
       Code: code,
-      AccessToken: accessToken,
+      AccessToken: accessToken
     };
 
-    const result = await this.cognitoRequest(
-      verifyUserAttributePayload,
-      CognitoServiceTarget.VerifyUserAttribute
-    );
+    await this.cognitoRequest(verifyUserAttributePayload, CognitoServiceTarget.VerifyUserAttribute);
   }
 
   /**
    * Sign out the user and remove the current user session.
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
   async signOut(refreshToken: string) {
     const revokeTokenPayload = {
       Token: refreshToken,
-      ClientId: this.userPoolClientId,
+      ClientId: this.userPoolClientId
     };
 
-    await this.cognitoRequest(
-      revokeTokenPayload,
-      CognitoServiceTarget.RevokeToken
-    );
+    await this.cognitoRequest(revokeTokenPayload, CognitoServiceTarget.RevokeToken);
   }
 
   /**
    * Request forgot password.
    * @param username Username
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
   async forgotPassword(username: string) {
     const forgotPasswordPayload = {
       ClientId: this.userPoolClientId,
-      Username: username,
+      Username: username
     };
 
-    await this.cognitoRequest(
-      forgotPasswordPayload,
-      CognitoServiceTarget.ForgotPassword
-    );
+    await this.cognitoRequest(forgotPasswordPayload, CognitoServiceTarget.ForgotPassword);
   }
 
   /**
@@ -543,24 +482,17 @@ export class CognitoClient {
    * @param newPassword New password
    * @param confirmationCode Confirmation code which the user got through E-mail
    *
-   * @throws {CognitoError}
+   * @throws {CognitoException}
    */
-  async confirmForgotPassword(
-    username: string,
-    newPassword: string,
-    confirmationCode: string
-  ) {
+  async confirmForgotPassword(username: string, newPassword: string, confirmationCode: string) {
     const confirmForgotPasswordPayload = {
       ClientId: this.userPoolClientId,
       Username: username,
       ConfirmationCode: confirmationCode,
-      Password: newPassword,
+      Password: newPassword
     };
 
-    await this.cognitoRequest(
-      confirmForgotPasswordPayload,
-      CognitoServiceTarget.ConfirmForgotPassword
-    );
+    await this.cognitoRequest(confirmForgotPasswordPayload, CognitoServiceTarget.ConfirmForgotPassword);
   }
 
   /**
@@ -570,13 +502,10 @@ export class CognitoClient {
   async resendConfirmationCode(username: string) {
     const resendConfirmationCodePayLoad = {
       ClientId: this.userPoolClientId,
-      Username: username,
+      Username: username
     };
 
-    await this.cognitoRequest(
-      resendConfirmationCodePayLoad,
-      CognitoServiceTarget.ResendConfirmationCode
-    );
+    await this.cognitoRequest(resendConfirmationCodePayLoad, CognitoServiceTarget.ResendConfirmationCode);
   }
 
   /**
@@ -590,38 +519,33 @@ export class CognitoClient {
    */
   async generateOAuthSignInUrl(identityProvider?: CognitoIdentityProvider) {
     if (this.oAuth === undefined) {
-      throw Error(
-        "You have to define oAuth options to use generateFederatedSignUrl"
-      );
+      throw Error('You have to define oAuth options to use generateFederatedSignUrl');
     }
 
-    const state = (await randomBytes(32)).toString("hex");
-    const pkce = (await randomBytes(128)).toString("hex");
+    const state = (await randomBytes(32)).toString('hex');
+    const pkce = (await randomBytes(128)).toString('hex');
 
     const code_challenge = Buffer.from(hashJs.sha256().update(pkce).digest())
-      .toString("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
 
     const queryParams = new URLSearchParams();
 
-    queryParams.append("redirect_uri", this.oAuth.redirectUrl);
-    queryParams.append("response_type", this.oAuth.responseType);
-    queryParams.append("client_id", this.userPoolClientId);
-    identityProvider &&
-      queryParams.append("identity_provider", identityProvider);
-    queryParams.append("scope", this.oAuth.scopes.join(" "));
-    queryParams.append("state", state);
-    queryParams.append("code_challenge", code_challenge);
-    queryParams.append("code_challenge_method", "S256");
+    queryParams.append('redirect_uri', this.oAuth.redirectUrl);
+    queryParams.append('response_type', this.oAuth.responseType);
+    queryParams.append('client_id', this.userPoolClientId);
+    identityProvider && queryParams.append('identity_provider', identityProvider);
+    queryParams.append('scope', this.oAuth.scopes.join(' '));
+    queryParams.append('state', state);
+    queryParams.append('code_challenge', code_challenge);
+    queryParams.append('code_challenge_method', 'S256');
 
     return {
-      url: `${
-        this.oAuth.cognitoDomain
-      }/oauth2/authorize?${queryParams.toString()}`,
+      url: `${this.oAuth.cognitoDomain}/oauth2/authorize?${queryParams.toString()}`,
       state,
-      pkce,
+      pkce
     };
   }
 
@@ -638,43 +562,36 @@ export class CognitoClient {
    */
   async handleCodeFlow(returnUrl: string, pkce: string): Promise<Session> {
     if (this.oAuth === undefined) {
-      throw Error("You have to define oAuth options to use handleCodeFlow");
+      throw Error('You have to define oAuth options to use handleCodeFlow');
     }
 
     const url = new URL(returnUrl);
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state");
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
 
     if (code === null || state === null) {
-      throw Error("code or state parameter is missing from return url.");
+      throw Error('code or state parameter is missing from return url.');
     }
 
     const urlParams = new URLSearchParams();
 
-    urlParams.append("grant_type", "authorization_code");
-    urlParams.append("code", code);
-    urlParams.append("client_id", this.userPoolClientId);
-    urlParams.append("redirect_uri", this.oAuth.redirectUrl);
-    urlParams.append("code_verifier", pkce);
+    urlParams.append('grant_type', 'authorization_code');
+    urlParams.append('code', code);
+    urlParams.append('client_id', this.userPoolClientId);
+    urlParams.append('redirect_uri', this.oAuth.redirectUrl);
+    urlParams.append('code_verifier', pkce);
 
     const tokenEndpoint = `${this.oAuth.cognitoDomain}/oauth2/token`;
 
     const response = await fetch(tokenEndpoint, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: urlParams.toString(),
+      body: urlParams.toString()
     });
 
-    const {
-      access_token,
-      refresh_token,
-      id_token,
-      expires_in,
-      token_type,
-      error,
-    } = await response.json();
+    const { access_token, refresh_token, id_token, expires_in, token_type, error } = await response.json();
 
     if (error) {
       throw new Error(error);
@@ -685,7 +602,7 @@ export class CognitoClient {
       RefreshToken: refresh_token,
       IdToken: id_token,
       ExpiresIn: expires_in,
-      TokenType: token_type,
+      TokenType: token_type
     });
 
     return session;
