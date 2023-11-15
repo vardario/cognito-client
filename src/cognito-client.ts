@@ -3,10 +3,7 @@ import hashJs from "hash.js";
 import { BigInteger } from "jsbn";
 import { Buffer } from "buffer";
 
-import {
-  CognitoAuthErrorResponse,
-  getAuthError,
-} from "./error.js";
+import { CognitoException, CognitoError } from "./error.js";
 
 import {
   calculateSignature,
@@ -234,7 +231,7 @@ export class CognitoClient {
     body: object,
     serviceTarget: CognitoServiceTarget
   ) {
-    const respondToAuthChallenge = await fetch(this.cognitoEndpoint, {
+    const cognitoResponse = await fetch(this.cognitoEndpoint, {
       headers: {
         "x-amz-target": `AWSCognitoIdentityProviderService.${serviceTarget}`,
         "content-type": "application/x-amz-json-1.1",
@@ -243,16 +240,17 @@ export class CognitoClient {
       body: JSON.stringify(body),
     });
 
-    if (
-      respondToAuthChallenge.status < 200 ||
-      respondToAuthChallenge.status > 299
-    ) {
+    if (cognitoResponse.status < 200 || cognitoResponse.status > 299) {
       const errorMessage =
-        (await respondToAuthChallenge.json()) as CognitoAuthErrorResponse;
-      throw getAuthError(errorMessage);
+        cognitoResponse.headers.get("X-Amzn-ErrorMessage") ?? "Unknown";
+      const errorType =
+        cognitoResponse.headers.get("X-Amzn-ErrorType") ??
+        CognitoException.Unknown;
+
+      throw new CognitoError(errorMessage, errorType as CognitoException);
     }
 
-    return respondToAuthChallenge.json();
+    return cognitoResponse.json();
   }
 
   private static authResultToSession(
@@ -276,7 +274,7 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async authenticateUserSrp(
     username: string,
@@ -350,7 +348,7 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
     const initiateAuthPayload = {
@@ -401,7 +399,7 @@ export class CognitoClient {
    * @param username Username
    * @param password Password
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async signUp(
     username: string,
@@ -432,7 +430,7 @@ export class CognitoClient {
    * @param username Username
    * @param code Confirmation code the user gets through the registration E-Mail
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async confirmSignUp(username: string, code: string) {
     const confirmSignUpPayload = {
@@ -452,7 +450,7 @@ export class CognitoClient {
    * @param currentPassword Current user password.
    * @param newPassword  New user password.
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async changePassword(
     currentPassword: string,
@@ -506,7 +504,7 @@ export class CognitoClient {
   /**
    * Sign out the user and remove the current user session.
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async signOut(refreshToken: string) {
     const revokeTokenPayload = {
@@ -524,7 +522,7 @@ export class CognitoClient {
    * Request forgot password.
    * @param username Username
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async forgotPassword(username: string) {
     const forgotPasswordPayload = {
@@ -545,7 +543,7 @@ export class CognitoClient {
    * @param newPassword New password
    * @param confirmationCode Confirmation code which the user got through E-mail
    *
-   * @throws {AuthException}
+   * @throws {CognitoError}
    */
   async confirmForgotPassword(
     username: string,
