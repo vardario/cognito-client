@@ -1,12 +1,12 @@
-const {
+import {
   AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
-  AttributeDataType,
+  AdminSetUserPasswordCommand,  
   CognitoIdentityProviderClient,
   CreateUserPoolClientCommand,
   CreateUserPoolCommand,
-} = await import("@aws-sdk/client-cognito-identity-provider");
+} from "@aws-sdk/client-cognito-identity-provider";
 
+import { AttributeDataType } from "@aws-sdk/client-cognito-identity-provider/dist-types/models/models_0.js";
 import { JSDOM } from "jsdom";
 
 export const user = {

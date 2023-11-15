@@ -140,10 +140,10 @@ export enum CognitoException {
 }
 
 export class CognitoError extends Error {
-  public readonly authError: CognitoException;
-
-  constructor(message: string, authError: CognitoException) {
+  constructor(
+    message: string,
+    public readonly cognitoException: CognitoException
+  ) {
     super(message);
-    this.authError = authError;
   }
 }
