@@ -314,9 +314,7 @@ export class CognitoClient {
       CognitoServiceTarget.RespondToAuthChallenge
     );
 
-    const session = CognitoClient.authResultToSession(AuthenticationResult);
-
-    return session;
+    return CognitoClient.authResultToSession(AuthenticationResult);
   }
 
   /**
