@@ -1,6 +1,6 @@
 import 'isomorphic-fetch';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import { CognitoClient, CognitoIdentityProvider, OAuth2Props } from './cognito-client.js';
+import { CognitoClient, CognitoIdentityProvider, OAuth2Props } from '../cognito-client.js';
 import { newUser, setupCognito, user } from './test-utils.js';
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 

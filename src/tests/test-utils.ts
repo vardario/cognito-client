@@ -6,7 +6,7 @@ import {
   CreateUserPoolCommand
 } from '@aws-sdk/client-cognito-identity-provider';
 
-import { AttributeDataType } from '@aws-sdk/client-cognito-identity-provider/dist-types/models/models_0.js';
+import { AttributeDataType } from '@aws-sdk/client-cognito-identity-provider';
 import { JSDOM } from 'jsdom';
 
 export const user = {
