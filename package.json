@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc --build",
     "format": "prettier --plugin-search-dir . --write . && prettier-package-json --write && eslint --fix .",
+    "prepare": "husky install",
     "test": "vitest run",
     "watch": "tsc --build --watch"
   },
@@ -35,7 +36,7 @@
     "eslint": "^8.40.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-unused-imports": "^2.0.0",
-    "husky": "^8.0.3",
+    "husky": "^8.0.0",
     "isomorphic-fetch": "^3.0.0",
     "jsdom": "^20.0.2",
     "lint-staged": "^13.2.2",
