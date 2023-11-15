@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@vardario/cookies':
-    specifier: ^0.1.4
-    version: 0.1.4
   buffer:
     specifier: ^6.0.3
     version: 6.0.3
@@ -20,6 +17,9 @@ dependencies:
   hash.js:
     specifier: ^1.1.7
     version: 1.1.7
+  js-cookie:
+    specifier: ^3.0.5
+    version: 3.0.5
   jsbn:
     specifier: ^1.1.0
     version: 1.1.0
@@ -31,6 +31,9 @@ devDependencies:
   '@aws-sdk/client-cognito-identity-provider':
     specifier: ^3.209.0
     version: 3.209.0
+  '@types/js-cookie':
+    specifier: ^3.0.3
+    version: 3.0.3
   '@types/jsbn':
     specifier: ^1.2.30
     version: 1.2.30
@@ -999,6 +1002,10 @@ packages:
       '@types/node': 20.1.2
     dev: true
 
+  /@types/js-cookie@3.0.3:
+    resolution: {integrity: sha512-Xe7IImK09HP1sv2M/aI+48a20VX+TdRJucfq4vfRVy6nWN8PYPOEnlMRSgxJAgYQIXJVL8dZ4/ilAM7dWNaOww==}
+    dev: true
+
   /@types/jsbn@1.2.30:
     resolution: {integrity: sha512-VZouplBofjq3YOIHLNRBDxILs/nAArdTZ2QP1ooflyhS+yPExWsFE+i2paBIBb7OI3NJShfcde/nogqk4SPB/Q==}
     dev: true
@@ -1053,10 +1060,6 @@ packages:
   /@types/tough-cookie@4.0.2:
     resolution: {integrity: sha512-Q5vtl1W5ue16D+nIaW8JWebSSraJVlK+EthKn7e7UcD4KWsaSJ8BqGPXNaPghgtcn/fhvrN17Tv8ksUsQpiplw==}
     dev: true
-
-  /@vardario/cookies@0.1.4:
-    resolution: {integrity: sha512-ntl1/xW1SUV06oRsS8dIZOqQ7MOEaVczoymnfzcLphPMeaK62s8SgrZ+N+9xyRGjj3NxvvlR4zffHTUYy/LUig==}
-    dev: false
 
   /@vitest/expect@0.31.0:
     resolution: {integrity: sha512-Jlm8ZTyp6vMY9iz9Ny9a0BHnCG4fqBa8neCF6Pk/c/6vkUk49Ls6UBlgGAU82QnzzoaUs9E/mUhq/eq9uMOv/g==}
@@ -1663,6 +1666,11 @@ packages:
     transitivePeerDependencies:
       - encoding
     dev: true
+
+  /js-cookie@3.0.5:
+    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
+    engines: {node: '>=14'}
+    dev: false
 
   /js-string-escape@1.0.1:
     resolution: {integrity: sha512-Smw4xcfIQ5LVjAOuJCvN/zIodzA/BBSsluuoSykP+lUvScIi4U6RJLfwHet5cxFnCswUjISV8oAXaqaJDY3chg==}

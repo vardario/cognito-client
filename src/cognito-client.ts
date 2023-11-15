@@ -4,12 +4,9 @@ import { BigInteger } from "jsbn";
 import { Buffer } from "buffer";
 
 import {
-  AuthError,
-  AuthException,
   CognitoAuthErrorResponse,
   getAuthError,
 } from "./error.js";
-import { SessionStorage } from "./session-storage/index.js";
 
 import {
   calculateSignature,
@@ -69,22 +66,6 @@ export interface CognitoClientProps {
    * If not defined the endpoint will be determined by @see userPoolId .
    */
   endpoint?: string;
-
-  /**
-   * Session storage.
-   * You can either choose on of the provided build in session
-   * storages. Or provider your own one based on @see SessionStorage .
-   *
-   * <ul>
-   *  <li>
-   *    @see CookieSessionStorage
-   *  </li>
-   *  <li>
-   *    @see MemorySessionStorage
-   *  </li>
-   * </ul>
-   */
-  sessionStorage: SessionStorage;
 
   /**
    * Cognito OAuth related options. See @see OAuthProps .
@@ -219,14 +200,14 @@ export class CognitoClient {
   private readonly cognitoEndpoint: string;
   private readonly cognitoPoolName: string;
   private readonly userPoolClientId: string;
-  private readonly sessionStorage: SessionStorage;
+
   private readonly oAuth?: OAuth2Props;
 
   constructor({
     userPoolId,
     userPoolClientId,
     endpoint,
-    sessionStorage,
+
     oAuth2: oAuth,
   }: CognitoClientProps) {
     const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split("_");
@@ -235,7 +216,6 @@ export class CognitoClient {
     ).replace(/\/$/, "");
     this.cognitoPoolName = cognitoPoolName;
     this.userPoolClientId = userPoolClientId;
-    this.sessionStorage = sessionStorage;
     this.oAuth = oAuth;
   }
 
@@ -359,7 +339,6 @@ export class CognitoClient {
     );
 
     const session = CognitoClient.authResultToSession(AuthenticationResult);
-    this.sessionStorage.setSession(session);
 
     return session;
   }
@@ -390,17 +369,17 @@ export class CognitoClient {
     )) as AuthenticationResponse;
 
     const session = CognitoClient.authResultToSession(AuthenticationResult);
-    this.sessionStorage.setSession(session);
-
     return session;
   }
 
-  private async refreshSession(session: Session): Promise<Session | undefined> {
+  public async refreshSession(
+    refreshToken: string
+  ): Promise<Session | undefined> {
     const refreshTokenPayload = {
       AuthFlow: "REFRESH_TOKEN_AUTH",
       ClientId: this.userPoolClientId,
       AuthParameters: {
-        REFRESH_TOKEN: session.refreshToken,
+        REFRESH_TOKEN: refreshToken,
       },
       ClientMetadata: {},
     };
@@ -410,32 +389,11 @@ export class CognitoClient {
       CognitoServiceTarget.InitiateAuth
     )) as AuthenticationResponse;
 
-    const newSession = CognitoClient.authResultToSession({
-      ...AuthenticationResult,
-      RefreshToken: session.refreshToken,
-    });
-
-    this.sessionStorage.setSession(newSession);
-
-    return newSession;
-  }
-
-  /**
-   * Returns the current auth session.
-   * The auth session is only defined when we previously had a successful user authentication.
-   * This function will also take care to refresh the session with the refresh token in case
-   * the current session has expired.
-   *
-   * @throws {AuthException}
-   */
-  async getSession(): Promise<Session | undefined> {
-    const session = this.sessionStorage.getSession();
-    if (session) {
-      if (new Date().getTime() >= session.expiresIn) {
-        return this.refreshSession(session);
-      }
+    if (!AuthenticationResult.RefreshToken) {
+      AuthenticationResult.RefreshToken = refreshToken;
     }
-    return session;
+
+    return CognitoClient.authResultToSession(AuthenticationResult);
   }
 
   /**
@@ -496,20 +454,15 @@ export class CognitoClient {
    *
    * @throws {AuthException}
    */
-  async changePassword(currentPassword: string, newPassword: string) {
-    const session = await this.getSession();
-
-    if (session === undefined) {
-      throw new AuthException(
-        "User must be authenticated",
-        AuthError.UserNotAuthenticated
-      );
-    }
-
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    accessToken: string
+  ) {
     const changePasswordPayload = {
       PreviousPassword: currentPassword,
       ProposedPassword: newPassword,
-      AccessToken: session.accessToken,
+      AccessToken: accessToken,
     };
 
     const result = await this.cognitoRequest(
@@ -518,19 +471,13 @@ export class CognitoClient {
     );
   }
 
-  async updateUserAttributes(userAttributes: UserAttribute[]) {
-    const session = await this.getSession();
-
-    if (session === undefined) {
-      throw new AuthException(
-        "User must be authenticated",
-        AuthError.UserNotAuthenticated
-      );
-    }
-
+  async updateUserAttributes(
+    userAttributes: UserAttribute[],
+    accessToken: string
+  ) {
     const updateUserAttributesPayload = {
       UserAttributes: userAttributes,
-      AccessToken: session.accessToken,
+      AccessToken: accessToken,
     };
 
     const result = await this.cognitoRequest(
@@ -539,20 +486,15 @@ export class CognitoClient {
     );
   }
 
-  async verifyUserAttribute(attributeName: string, code: string) {
-    const session = await this.getSession();
-
-    if (session === undefined) {
-      throw new AuthException(
-        "User must be authenticated",
-        AuthError.UserNotAuthenticated
-      );
-    }
-
+  async verifyUserAttribute(
+    attributeName: string,
+    code: string,
+    accessToken: string
+  ) {
     const verifyUserAttributePayload = {
       AttributeName: attributeName,
       Code: code,
-      AccessToken: session.accessToken,
+      AccessToken: accessToken,
     };
 
     const result = await this.cognitoRequest(
@@ -566,21 +508,12 @@ export class CognitoClient {
    *
    * @throws {AuthException}
    */
-  async signOut() {
-    const session = await this.getSession();
-    if (session === undefined) {
-      throw new AuthException(
-        "User must be authenticated",
-        AuthError.UserNotAuthenticated
-      );
-    }
-
+  async signOut(refreshToken: string) {
     const revokeTokenPayload = {
-      Token: session.refreshToken,
+      Token: refreshToken,
       ClientId: this.userPoolClientId,
     };
 
-    this.sessionStorage.setSession(undefined);
     await this.cognitoRequest(
       revokeTokenPayload,
       CognitoServiceTarget.RevokeToken
@@ -685,14 +618,13 @@ export class CognitoClient {
     queryParams.append("code_challenge", code_challenge);
     queryParams.append("code_challenge_method", "S256");
 
-    this.sessionStorage.setOauthVerificationParams({
+    return {
+      url: `${
+        this.oAuth.cognitoDomain
+      }/oauth2/authorize?${queryParams.toString()}`,
       state,
       pkce,
-    });
-
-    return `${
-      this.oAuth.cognitoDomain
-    }/oauth2/authorize?${queryParams.toString()}`;
+    };
   }
 
   /**
@@ -706,7 +638,7 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async handleCodeFlow(returnUrl: string): Promise<Session> {
+  async handleCodeFlow(returnUrl: string, pkce: string): Promise<Session> {
     if (this.oAuth === undefined) {
       throw Error("You have to define oAuth options to use handleCodeFlow");
     }
@@ -719,28 +651,13 @@ export class CognitoClient {
       throw Error("code or state parameter is missing from return url.");
     }
 
-    const oAuthVerificationParams =
-      this.sessionStorage.getOauthVerificationParams();
-
-    if (oAuthVerificationParams === undefined) {
-      throw new Error(
-        "OAuth verification parameters are missing, did you forgot to call generateOAuthSignInUrl ?"
-      );
-    }
-
-    if (oAuthVerificationParams.state !== state) {
-      throw new Error(
-        "state parameter does not match with previous value generated by previous call of generateOAuthSignInUrl ."
-      );
-    }
-
     const urlParams = new URLSearchParams();
 
     urlParams.append("grant_type", "authorization_code");
     urlParams.append("code", code);
     urlParams.append("client_id", this.userPoolClientId);
     urlParams.append("redirect_uri", this.oAuth.redirectUrl);
-    urlParams.append("code_verifier", oAuthVerificationParams.pkce);
+    urlParams.append("code_verifier", pkce);
 
     const tokenEndpoint = `${this.oAuth.cognitoDomain}/oauth2/token`;
 
@@ -773,7 +690,6 @@ export class CognitoClient {
       TokenType: token_type,
     });
 
-    this.sessionStorage.setSession(session);
     return session;
   }
 }
