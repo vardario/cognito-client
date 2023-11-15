@@ -17,7 +17,8 @@ module.exports = {
     '*.csv',
     '*.ttf',
     '*.postcss',
-    '*.html'
+    '*.html',
+    '*.md'
   ],
   overrides: [],
   parserOptions: {

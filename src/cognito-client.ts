@@ -196,13 +196,7 @@ export class CognitoClient {
 
   private readonly oAuth?: OAuth2Props;
 
-  constructor({
-    userPoolId,
-    userPoolClientId,
-    endpoint,
-
-    oAuth2: oAuth
-  }: CognitoClientProps) {
+  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth }: CognitoClientProps) {
     const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split('_');
     this.cognitoEndpoint = (endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`).replace(/\/$/, '');
     this.cognitoPoolName = cognitoPoolName;
@@ -346,7 +340,14 @@ export class CognitoClient {
     return session;
   }
 
-  public async refreshSession(refreshToken: string): Promise<Session | undefined> {
+  /**
+   * Returns a new session based on the given refresh token.
+   *
+   * @param refreshToken
+   * @returns @see Session
+   * @throws {CognitoError}
+   */
+  public async refreshSession(refreshToken: string): Promise<Session> {
     const refreshTokenPayload = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
