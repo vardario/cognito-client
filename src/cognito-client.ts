@@ -590,7 +590,7 @@ export class CognitoClient {
       body: urlParams.toString()
     });
 
-    const { access_token, refresh_token, id_token, expires_in, token_type, error } = await response.json();
+    const { access_token, refresh_token, id_token, expires_in, error } = await response.json();
 
     if (error) {
       throw new Error(error);
@@ -600,8 +600,7 @@ export class CognitoClient {
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,
-      ExpiresIn: expires_in,
-      TokenType: token_type
+      ExpiresIn: expires_in
     });
 
     return session;
