@@ -1,6 +1,14 @@
 import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
-import rb from 'randombytes';
+import { Buffer } from 'buffer';
+import formatInTimeZone from 'date-fns-tz/formatInTimeZone';
+
+let crypto: any = globalThis.crypto;
+
+if (!crypto) {
+  const nodeCrypto = await import('node:crypto');
+  crypto = nodeCrypto.webcrypto;
+}
 
 const initN =
   'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1' +
@@ -24,7 +32,7 @@ const N = new BigInteger(initN, 16);
 const g = new BigInteger('2', 16);
 const k = new BigInteger(hashHexString(`${padHex(N)}${padHex(g)}`), 16);
 
-export function padHex(bigInt: BigInteger) {
+export function padHex(bigInt: BigInteger): string {
   const HEX_MSB_REGEX = /^[89a-f]/i;
   const isNegative = bigInt.compareTo(BigInteger.ZERO) < 0;
 
@@ -115,8 +123,14 @@ export function getPasswordAuthenticationKey(
   return calculateHKDF(Buffer.from(padHex(S), 'hex'), Buffer.from(padHex(U), 'hex'));
 }
 
-export function calculateSignature(poolName: string, userId: string, secretBlock: string, hkdf: number[]) {
-  const timeStamp = formatTimestamp(new Date());
+export function calculateSignature(
+  poolName: string,
+  userId: string,
+  secretBlock: string,
+  hkdf: number[],
+  date = new Date()
+) {
+  const timeStamp = formatTimestamp(date);
 
   const concatBuffer = Buffer.concat([
     Buffer.from(poolName, 'utf8'),
@@ -148,21 +162,9 @@ export function decodeJwt<T = unknown>(jwt: string) {
 }
 
 export async function randomBytes(num: number) {
-  return rb(num);
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(num)));
 }
 
 export function formatTimestamp(date: Date) {
-  return `${new Intl.DateTimeFormat('default', {
-    weekday: 'short'
-  }).format(date)} ${new Intl.DateTimeFormat('default', {
-    month: 'short'
-  }).format(date)} ${new Intl.DateTimeFormat('default', {
-    day: '2-digit'
-  }).format(date)} ${new Intl.DateTimeFormat('default', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).format(date)} UTC ${new Intl.DateTimeFormat('default', {
-    year: 'numeric'
-  }).format(date)}`;
+  return formatInTimeZone(date, 'UTC', "EEE MMM d HH:mm:ss 'UTC' yyyy");
 }
