@@ -167,7 +167,6 @@ export interface AuthenticationResult {
   AccessToken: string;
   ExpiresIn: number;
   IdToken: string;
-  TokenType: string;
   RefreshToken: string;
 }
 
@@ -183,6 +182,15 @@ export interface ChallengeResponse {
     SRP_B: string;
     USERNAME: string;
     USER_ID_FOR_SRP: string;
+  };
+}
+
+export function authResultToSession(authenticationResult: AuthenticationResult): Session {
+  return {
+    accessToken: authenticationResult.AccessToken,
+    idToken: authenticationResult.IdToken,
+    expiresIn: new Date().getTime() + authenticationResult.ExpiresIn * 1000,
+    refreshToken: authenticationResult.RefreshToken
   };
 }
 
@@ -231,15 +239,6 @@ export class CognitoClient {
     }
 
     return cognitoResponse.json();
-  }
-
-  private static authResultToSession(authenticationResult: AuthenticationResult): Session {
-    return {
-      accessToken: authenticationResult.AccessToken,
-      idToken: authenticationResult.IdToken,
-      expiresIn: new Date().getMilliseconds() / 1000 + authenticationResult.ExpiresIn,
-      refreshToken: authenticationResult.RefreshToken
-    };
   }
 
   /**
@@ -308,7 +307,7 @@ export class CognitoClient {
       CognitoServiceTarget.RespondToAuthChallenge
     );
 
-    return CognitoClient.authResultToSession(AuthenticationResult);
+    return authResultToSession(AuthenticationResult);
   }
 
   /**
@@ -336,7 +335,7 @@ export class CognitoClient {
       CognitoServiceTarget.InitiateAuth
     )) as AuthenticationResponse;
 
-    const session = CognitoClient.authResultToSession(AuthenticationResult);
+    const session = authResultToSession(AuthenticationResult);
     return session;
   }
 
@@ -366,7 +365,7 @@ export class CognitoClient {
       AuthenticationResult.RefreshToken = refreshToken;
     }
 
-    return CognitoClient.authResultToSession(AuthenticationResult);
+    return authResultToSession(AuthenticationResult);
   }
 
   /**
@@ -597,7 +596,7 @@ export class CognitoClient {
       throw new Error(error);
     }
 
-    const session = CognitoClient.authResultToSession({
+    const session = authResultToSession({
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,

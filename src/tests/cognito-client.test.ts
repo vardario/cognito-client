@@ -1,6 +1,12 @@
 import 'isomorphic-fetch';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import { CognitoClient, CognitoIdentityProvider, OAuth2Props } from '../cognito-client.js';
+import {
+  AuthenticationResult,
+  CognitoClient,
+  CognitoIdentityProvider,
+  OAuth2Props,
+  authResultToSession
+} from '../cognito-client.js';
 import { newUser, setupCognito, user } from './test-utils.js';
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 
@@ -91,5 +97,20 @@ describe('Cognito Client', () => {
     await _test((searchParams: URLSearchParams) => {
       expect(searchParams.get('identity_provider')).toBe(CognitoIdentityProvider.Apple);
     }, CognitoIdentityProvider.Apple);
+  });
+
+  test('authResultToSession', () => {
+    const now = new Date();
+    const authResult: AuthenticationResult = {
+      AccessToken: 'aaaa',
+      ExpiresIn: 60,
+      IdToken: 'bbbb',
+      RefreshToken: 'cccc'
+    };
+    const session = authResultToSession(authResult);
+    expect(session.accessToken).toBe(authResult.AccessToken);
+    expect(session.idToken).toBe(authResult.IdToken);
+    expect(session.refreshToken).toBe(authResult.RefreshToken);
+    expect(session.expiresIn).toBe(authResult.ExpiresIn * 1000 + now.getTime());
   });
 });
