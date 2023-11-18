@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "buffer": "^6.0.3",
+    "date-fns-tz": "^2.0.0",
     "hash.js": "^1.1.7",
-    "jsbn": "^1.1.0",
-    "randombytes": "^2.1.0"
+    "jsbn": "^1.1.0"
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.454.0",
