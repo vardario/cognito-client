@@ -4,11 +4,19 @@ import {
   AuthenticationResult,
   CognitoClient,
   CognitoIdentityProvider,
+  CognitoServiceTarget,
   OAuth2Props,
-  authResultToSession
+  authResultToSession,
+  cognitoRequest
 } from '../cognito-client.js';
 import { newUser, setupCognito, user } from './test-utils.js';
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
+import { vi } from 'vitest';
+import createFetchMock from 'vitest-fetch-mock';
+import { beforeEach } from 'vitest';
+import { CognitoError, CognitoException } from '../error.js';
+
+const fetchMocker = createFetchMock(vi);
 
 describe('Cognito Client', () => {
   let cognitoClient: CognitoClient;
@@ -46,6 +54,10 @@ describe('Cognito Client', () => {
 
   afterAll(async () => {
     await container.stop();
+  });
+
+  beforeEach(() => {
+    fetchMocker.mockReset();
   });
 
   test('authenticateUserSrp: TODO', async () => {
@@ -112,5 +124,97 @@ describe('Cognito Client', () => {
     expect(session.idToken).toBe(authResult.IdToken);
     expect(session.refreshToken).toBe(authResult.RefreshToken);
     expect(session.expiresIn).toBe(authResult.ExpiresIn * 1000 + now.getTime());
+  });
+
+  test('cognitoRequest', async () => {
+    fetchMocker.enableMocks();
+
+    fetchMocker.mockResponses(
+      [
+        JSON.stringify({
+          message: 'test',
+          code: 'code'
+        }),
+        {
+          status: 400,
+          headers: {
+            'X-Amzn-ErrorMessage': 'test',
+            'X-Amzn-ErrorType': 'code'
+          }
+        }
+      ],
+      [
+        JSON.stringify({
+          message: 'test',
+          code: 'code'
+        }),
+        {
+          status: 400
+        }
+      ],
+      [
+        JSON.stringify({
+          Message: 'test',
+          code: 'code'
+        }),
+        {
+          status: 400
+        }
+      ],
+      [
+        JSON.stringify({}),
+        {
+          status: 400,
+          headers: {
+            'X-Amzn-ErrorMessage': 'test',
+            'X-Amzn-ErrorType': 'code'
+          }
+        }
+      ],
+      [
+        JSON.stringify({}),
+        {
+          status: 400,
+          headers: {
+            'X-Amzn-ErrorMessage': 'test',
+            'X-Amzn-ErrorType': 'code:'
+          }
+        }
+      ],
+      [
+        JSON.stringify({}),
+        {
+          status: 400,
+          headers: {
+            'X-Amzn-ErrorMessage': 'test',
+            'X-Amzn-ErrorType': 'code,'
+          }
+        }
+      ]
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
   });
 });

@@ -1,7 +1,7 @@
 import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
 import { Buffer } from 'buffer';
-import { CognitoError, CognitoException } from './error.js';
+import { CognitoCommonException, CognitoError, CognitoException } from './error.js';
 
 import {
   calculateSignature,
@@ -194,6 +194,51 @@ export function authResultToSession(authenticationResult: AuthenticationResult):
   };
 }
 
+export async function cognitoRequest(body: object, serviceTarget: CognitoServiceTarget, cognitoEndpoint: string) {
+  const cognitoResponse = await fetch(cognitoEndpoint, {
+    headers: {
+      'x-amz-target': `AWSCognitoIdentityProviderService.${serviceTarget}`,
+      'content-type': 'application/x-amz-json-1.1'
+    },
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+
+  if (cognitoResponse && cognitoResponse.status < 300) {
+    return cognitoResponse.json();
+  }
+
+  const cognitoResponseBody = await cognitoResponse.json();
+
+  /**
+   * The whole error handling and value sanitization was inspired
+   * by @see https://github.com/aws-amplify/amplify-js/blob/1f5eefd9c40285eb99e57764ac8fca1f9519e2c6/packages/core/src/clients/serde/json.ts#L14
+   */
+
+  const sanitizeErrorType = (rawValue: string | number): string => {
+    const [cleanValue] = rawValue.toString().split(/[,:]+/);
+    if (cleanValue.includes('#')) {
+      return cleanValue.split('#')[1];
+    }
+    return cleanValue;
+  };
+
+  const errorMessage =
+    cognitoResponse.headers.get('X-Amzn-ErrorMessage') ??
+    cognitoResponseBody.message ??
+    cognitoResponseBody.Message ??
+    'Unknown error';
+
+  const cognitoException = sanitizeErrorType(
+    cognitoResponse.headers.get('X-Amzn-ErrorType') ??
+      cognitoResponseBody.code ??
+      cognitoResponseBody.__type ??
+      CognitoCommonException.Unknown
+  );
+
+  throw new CognitoError(errorMessage, cognitoException as CognitoException);
+}
+
 /**
  * Lightweight AWS Cogito client without any AWS SDK dependencies.
  */
@@ -221,26 +266,6 @@ export class CognitoClient {
     };
   }
 
-  private async cognitoRequest(body: object, serviceTarget: CognitoServiceTarget) {
-    const cognitoResponse = await fetch(this.cognitoEndpoint, {
-      headers: {
-        'x-amz-target': `AWSCognitoIdentityProviderService.${serviceTarget}`,
-        'content-type': 'application/x-amz-json-1.1'
-      },
-      method: 'POST',
-      body: JSON.stringify(body)
-    });
-
-    if (cognitoResponse.status < 200 || cognitoResponse.status > 299) {
-      const errorMessage = cognitoResponse.headers.get('X-Amzn-ErrorMessage') ?? 'Unknown';
-      const cognitoException = cognitoResponse.headers.get('X-Amzn-ErrorType') ?? CognitoException.Unknown;
-
-      throw new CognitoError(errorMessage, cognitoException as CognitoException);
-    }
-
-    return cognitoResponse.json();
-  }
-
   /**
    *
    * Performs user authentication with username and password through ALLOW_USER_SRP_AUTH .
@@ -248,7 +273,8 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {CognitoException}
+   *
+   * @throws {InitiateAuthException}
    */
   async authenticateUserSrp(username: string, password: string): Promise<Session> {
     const smallA = await generateSmallA();
@@ -264,9 +290,10 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const challenge = (await this.cognitoRequest(
+    const challenge = (await cognitoRequest(
       initiateAuthPayload,
-      CognitoServiceTarget.InitiateAuth
+      CognitoServiceTarget.InitiateAuth,
+      this.cognitoEndpoint
     )) as ChallengeResponse;
 
     const B = new BigInteger(challenge.ChallengeParameters.SRP_B, 16);
@@ -302,9 +329,10 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = await this.cognitoRequest(
+    const { AuthenticationResult } = await cognitoRequest(
       respondToAuthChallengePayload,
-      CognitoServiceTarget.RespondToAuthChallenge
+      CognitoServiceTarget.RespondToAuthChallenge,
+      this.cognitoEndpoint
     );
 
     return authResultToSession(AuthenticationResult);
@@ -317,7 +345,7 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {CognitoException}
+   * @throws {InitiateAuthException}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
     const initiateAuthPayload = {
@@ -330,9 +358,10 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await this.cognitoRequest(
+    const { AuthenticationResult } = (await cognitoRequest(
       initiateAuthPayload,
-      CognitoServiceTarget.InitiateAuth
+      CognitoServiceTarget.InitiateAuth,
+      this.cognitoEndpoint
     )) as AuthenticationResponse;
 
     const session = authResultToSession(AuthenticationResult);
@@ -344,7 +373,7 @@ export class CognitoClient {
    *
    * @param refreshToken
    * @returns @see Session
-   * @throws {CognitoError}
+   * @throws {InitiateAuthException}
    */
   public async refreshSession(refreshToken: string): Promise<Session> {
     const refreshTokenPayload = {
@@ -356,9 +385,10 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await this.cognitoRequest(
+    const { AuthenticationResult } = (await cognitoRequest(
       refreshTokenPayload,
-      CognitoServiceTarget.InitiateAuth
+      CognitoServiceTarget.InitiateAuth,
+      this.cognitoEndpoint
     )) as AuthenticationResponse;
 
     if (!AuthenticationResult.RefreshToken) {
@@ -373,7 +403,7 @@ export class CognitoClient {
    * @param username Username
    * @param password Password
    *
-   * @throws {CognitoException}
+   * @throws {SignUpException}
    */
   async signUp(username: string, password: string, userAttributes?: UserAttribute[]) {
     const signUpPayload = {
@@ -383,7 +413,7 @@ export class CognitoClient {
       UserAttributes: userAttributes
     };
 
-    const data = await this.cognitoRequest(signUpPayload, CognitoServiceTarget.SignUp);
+    const data = await cognitoRequest(signUpPayload, CognitoServiceTarget.SignUp, this.cognitoEndpoint);
 
     return {
       id: data.UserSub as string,
@@ -397,7 +427,7 @@ export class CognitoClient {
    * @param username Username
    * @param code Confirmation code the user gets through the registration E-Mail
    *
-   * @throws {CognitoException}
+   * @throws {ConfirmSignUpException}
    */
   async confirmSignUp(username: string, code: string) {
     const confirmSignUpPayload = {
@@ -406,7 +436,7 @@ export class CognitoClient {
       Username: username
     };
 
-    await this.cognitoRequest(confirmSignUpPayload, CognitoServiceTarget.ConfirmSignUp);
+    await cognitoRequest(confirmSignUpPayload, CognitoServiceTarget.ConfirmSignUp, this.cognitoEndpoint);
   }
 
   /**
@@ -414,7 +444,7 @@ export class CognitoClient {
    * @param currentPassword Current user password.
    * @param newPassword  New user password.
    *
-   * @throws {CognitoException}
+   * @throws {ChangePasswordException}
    */
   async changePassword(currentPassword: string, newPassword: string, accessToken: string) {
     const changePasswordPayload = {
@@ -423,18 +453,35 @@ export class CognitoClient {
       AccessToken: accessToken
     };
 
-    await this.cognitoRequest(changePasswordPayload, CognitoServiceTarget.ChangePassword);
+    await cognitoRequest(changePasswordPayload, CognitoServiceTarget.ChangePassword, this.cognitoEndpoint);
   }
 
+  /**
+   * Updates the user attributes.
+   *
+   * @param userAttributes List of user attributes to update.
+   * @param accessToken Access token of the current user.
+   *
+   * @throws {UpdateUserAttributesException}
+   */
   async updateUserAttributes(userAttributes: UserAttribute[], accessToken: string) {
     const updateUserAttributesPayload = {
       UserAttributes: userAttributes,
       AccessToken: accessToken
     };
 
-    await this.cognitoRequest(updateUserAttributesPayload, CognitoServiceTarget.UpdateUserAttributes);
+    await cognitoRequest(updateUserAttributesPayload, CognitoServiceTarget.UpdateUserAttributes, this.cognitoEndpoint);
   }
 
+  /**
+   * Verifies a given user attribute
+   *
+   * @param attributeName Name of the attribute to verify
+   * @param code  Verification code
+   * @param accessToken Access token of the current user.
+   *
+   * @throws {VerifyUserAttributeException}
+   */
   async verifyUserAttribute(attributeName: string, code: string, accessToken: string) {
     const verifyUserAttributePayload = {
       AttributeName: attributeName,
@@ -442,13 +489,13 @@ export class CognitoClient {
       AccessToken: accessToken
     };
 
-    await this.cognitoRequest(verifyUserAttributePayload, CognitoServiceTarget.VerifyUserAttribute);
+    await cognitoRequest(verifyUserAttributePayload, CognitoServiceTarget.VerifyUserAttribute, this.cognitoEndpoint);
   }
 
   /**
    * Sign out the user and remove the current user session.
    *
-   * @throws {CognitoException}
+   * @throws {RevokeTokenException}
    */
   async signOut(refreshToken: string) {
     const revokeTokenPayload = {
@@ -456,14 +503,14 @@ export class CognitoClient {
       ClientId: this.userPoolClientId
     };
 
-    await this.cognitoRequest(revokeTokenPayload, CognitoServiceTarget.RevokeToken);
+    await cognitoRequest(revokeTokenPayload, CognitoServiceTarget.RevokeToken, this.cognitoEndpoint);
   }
 
   /**
    * Request forgot password.
    * @param username Username
    *
-   * @throws {CognitoException}
+   * @throws {ForgotPasswordException}
    */
   async forgotPassword(username: string) {
     const forgotPasswordPayload = {
@@ -471,7 +518,7 @@ export class CognitoClient {
       Username: username
     };
 
-    await this.cognitoRequest(forgotPasswordPayload, CognitoServiceTarget.ForgotPassword);
+    await cognitoRequest(forgotPasswordPayload, CognitoServiceTarget.ForgotPassword, this.cognitoEndpoint);
   }
 
   /**
@@ -481,7 +528,7 @@ export class CognitoClient {
    * @param newPassword New password
    * @param confirmationCode Confirmation code which the user got through E-mail
    *
-   * @throws {CognitoException}
+   * @throws {ConfirmForgotPasswordException}
    */
   async confirmForgotPassword(username: string, newPassword: string, confirmationCode: string) {
     const confirmForgotPasswordPayload = {
@@ -491,12 +538,18 @@ export class CognitoClient {
       Password: newPassword
     };
 
-    await this.cognitoRequest(confirmForgotPasswordPayload, CognitoServiceTarget.ConfirmForgotPassword);
+    await cognitoRequest(
+      confirmForgotPasswordPayload,
+      CognitoServiceTarget.ConfirmForgotPassword,
+      this.cognitoEndpoint
+    );
   }
 
   /**
    * Triggers cognito to resend the confirmation code
    * @param username Username
+   *
+   * @throws {ResendConfirmationCodeException}
    */
   async resendConfirmationCode(username: string) {
     const resendConfirmationCodePayLoad = {
@@ -504,7 +557,11 @@ export class CognitoClient {
       Username: username
     };
 
-    await this.cognitoRequest(resendConfirmationCodePayLoad, CognitoServiceTarget.ResendConfirmationCode);
+    await cognitoRequest(
+      resendConfirmationCodePayLoad,
+      CognitoServiceTarget.ResendConfirmationCode,
+      this.cognitoEndpoint
+    );
   }
 
   /**
