@@ -76,6 +76,9 @@ devDependencies:
   vitest:
     specifier: ^0.34.6
     version: 0.34.6(jsdom@22.1.0)
+  vitest-fetch-mock:
+    specifier: ^0.2.2
+    version: 0.2.2(vitest@0.34.6)
 
 packages:
   /@aashutoshrathi/word-wrap@1.2.6:
@@ -2624,6 +2627,15 @@ packages:
     dependencies:
       crc-32: 1.2.2
       readable-stream: 3.6.2
+    dev: true
+
+  /cross-fetch@3.1.8:
+    resolution:
+      { integrity: sha512-cvA+JwZoU0Xq+h6WkMvAUqPEYy92Obet6UdKLfW60qn99ftItKjB5T+BkyWOFWe2pUyfQ+IJHmpOTznqk1M6Kg== }
+    dependencies:
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
     dev: true
 
   /cross-spawn@7.0.3:
@@ -5674,6 +5686,19 @@ packages:
       rollup: 4.5.0
     optionalDependencies:
       fsevents: 2.3.3
+    dev: true
+
+  /vitest-fetch-mock@0.2.2(vitest@0.34.6):
+    resolution:
+      { integrity: sha512-XmH6QgTSjCWrqXoPREIdbj40T7i1xnGmAsTAgfckoO75W1IEHKR8hcPCQ7SO16RsdW1t85oUm6pcQRLeBgjVYQ== }
+    engines: { node: '>=14.14.0' }
+    peerDependencies:
+      vitest: '>=0.16.0'
+    dependencies:
+      cross-fetch: 3.1.8
+      vitest: 0.34.6(jsdom@22.1.0)
+    transitivePeerDependencies:
+      - encoding
     dev: true
 
   /vitest@0.34.6(jsdom@22.1.0):
