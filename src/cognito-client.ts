@@ -10,7 +10,8 @@ import {
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
-  randomBytes
+  randomBytes,
+  calculateSecretHash
 } from './utils.js';
 
 export interface UserAttribute {
@@ -66,6 +67,11 @@ export interface CognitoClientProps {
    * Cognito OAuth related options. See @see OAuthProps .
    */
   oAuth2?: OAuth2Props;
+
+  /**
+   * Cognito Client Secret
+   */
+  clientSecret?: string;
 }
 
 /**
@@ -246,15 +252,18 @@ export class CognitoClient {
   private readonly cognitoEndpoint: string;
   private readonly cognitoPoolName: string;
   private readonly userPoolClientId: string;
+  private readonly clientSecret?: string;
+
 
   private readonly oAuth?: OAuth2Props;
 
-  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth }: CognitoClientProps) {
+  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth, clientSecret }: CognitoClientProps) {
     const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split('_');
     this.cognitoEndpoint = (endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`).replace(/\/$/, '');
     this.cognitoPoolName = cognitoPoolName;
     this.userPoolClientId = userPoolClientId;
     this.oAuth = oAuth;
+    this.clientSecret = clientSecret;
   }
 
   static getDecodedTokenFromSession(session: Session): DecodedTokens {
@@ -285,7 +294,11 @@ export class CognitoClient {
       ClientId: this.userPoolClientId,
       AuthParameters: {
         USERNAME: username,
-        SRP_A: A.toString(16)
+        SRP_A: A.toString(16),
+        ...(this.clientSecret) && 
+        {
+          SECRET_HASH: calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+        },
       },
       ClientMetadata: {}
     };
@@ -324,7 +337,10 @@ export class CognitoClient {
         PASSWORD_CLAIM_SECRET_BLOCK: challenge.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
         USERNAME: challenge.ChallengeParameters.USER_ID_FOR_SRP,
-        TIMESTAMP: timeStamp
+        TIMESTAMP: timeStamp,
+        ...(this.clientSecret) && {
+          SECRET_HASH: calculateSecretHash(this.clientSecret, this.userPoolClientId, challenge.ChallengeParameters.USER_ID_FOR_SRP)
+        },
       },
       ClientMetadata: {}
     };
@@ -380,7 +396,11 @@ export class CognitoClient {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
-        REFRESH_TOKEN: refreshToken
+        REFRESH_TOKEN: refreshToken,
+        ...(this.clientSecret) && 
+        {
+          SECRET_HASH: this.clientSecret
+        },
       },
       ClientMetadata: {}
     };

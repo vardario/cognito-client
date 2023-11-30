@@ -9,7 +9,8 @@ import {
   getPasswordAuthenticationKey,
   hashBuffer,
   hashHexString,
-  padHex
+  padHex,
+  calculateSecretHash
 } from '../utils';
 import { BigInteger } from 'jsbn';
 import { Buffer } from 'buffer';
@@ -86,4 +87,9 @@ describe('Utils Test', () => {
   test('formatTimestamp', () => {
     expect(formatTimestamp(new Date(Date.UTC(2023)))).toBe('Sun Jan 1 00:00:00 UTC 2023');
   });
+
+  test('calculateSecretHash', () => {
+    const hash = calculateSecretHash("clientSecret", "clientId", "username");
+    expect(hash).toBe('vH5prJR/bHEh4xqtNXGUBICLyh4AkiNCkefVf8h3VHs=');
+  })
 });
