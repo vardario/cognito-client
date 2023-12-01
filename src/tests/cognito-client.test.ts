@@ -84,7 +84,7 @@ describe('Cognito Client', () => {
 
     const session = await cognitoClient.authenticateUser(user.email, user.password);
     await cognitoClient.changePassword(user.password, newPassword, session.accessToken);
-    await cognitoClient.signOut(session.refreshToken);
+    await cognitoClient.revokeToken(session.refreshToken);
     expect(cognitoClient.authenticateUser(user.email, user.password)).rejects.toThrow();
     await cognitoClient.authenticateUser(user.email, newPassword);
   });
