@@ -14,19 +14,20 @@ import {
   randomBytes
 } from './utils.js';
 
-export interface AuthIntiBaseRequest {
-  AnalyticsMetadata?: {
-    AnalyticsEndpointId?: string;
-  };
+export interface CognitoBaseRequest {
   ClientId: string;
   ClientMetadata?: Record<string, string>;
+  AnalyticsMetadata?: {
+    AnalyticsEndpointId: string;
+  };
+
   UserContextData?: {
     EncodedData?: string;
     IpAddress?: string;
   };
 }
 
-export interface AuthIntiUserSrpRequest extends AuthIntiBaseRequest {
+export interface AuthIntiUserSrpRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_SRP_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -35,7 +36,7 @@ export interface AuthIntiUserSrpRequest extends AuthIntiBaseRequest {
   };
 }
 
-export interface AuthIntiUserPasswordRequest extends AuthIntiBaseRequest {
+export interface AuthIntiUserPasswordRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_PASSWORD_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -44,7 +45,7 @@ export interface AuthIntiUserPasswordRequest extends AuthIntiBaseRequest {
   };
 }
 
-export interface AuthIntiRefreshTokenRequest extends AuthIntiBaseRequest {
+export interface AuthIntiRefreshTokenRequest extends CognitoBaseRequest {
   AuthFlow: 'REFRESH_TOKEN_AUTH';
   AuthParameters: {
     REFRESH_TOKEN: string;
@@ -52,7 +53,7 @@ export interface AuthIntiRefreshTokenRequest extends AuthIntiBaseRequest {
   };
 }
 
-export interface AuthIntiCustomAuthRequest extends AuthIntiBaseRequest {
+export interface AuthIntiCustomAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'CUSTOM_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -66,17 +67,8 @@ export type AuthIntiRequest =
   | AuthIntiCustomAuthRequest
   | AuthIntiUserPasswordRequest;
 
-export interface RespondToAuthChallengeBaseRequest {
-  ClientId: string;
-  ClientMetadata?: Record<string, string>;
-  AnalyticsMetadata?: {
-    AnalyticsEndpointId: string;
-  };
+export interface RespondToAuthChallengeBaseRequest extends CognitoBaseRequest {
   Session?: string;
-  UserContextData?: {
-    EncodedData?: string;
-    IpAddress?: string;
-  };
 }
 
 export interface RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
@@ -180,6 +172,38 @@ export type RespondToAuthChallengeRequest =
 export interface UserAttribute {
   Name: string;
   Value: string;
+}
+
+export interface ConfirmForgotPasswordRequest extends CognitoBaseRequest {
+  ConfirmationCode: string;
+  Password: string;
+  Username: string;
+  SecretHash?: string;
+}
+
+export interface ConfirmSignUpRequest extends CognitoBaseRequest {
+  ConfirmationCode: string;
+  Username: string;
+  SecretHash?: string;
+  ForceAliasCreation?: boolean;
+}
+
+export interface ForgotPasswordRequest extends CognitoBaseRequest {
+  Username: string;
+  SecretHash?: string;
+}
+
+export interface SignUpRequest extends CognitoBaseRequest {
+  Username: string;
+  Password: string;
+  SecretHash?: string;
+  UserAttributes?: UserAttribute[];
+  ValidationData?: UserAttribute[];
+}
+
+export interface ResendConfirmationCodeRequest extends CognitoBaseRequest {
+  Username: string;
+  SecretHash?: string;
 }
 
 /**
@@ -584,14 +608,15 @@ export class CognitoClient {
    * @throws {SignUpException}
    */
   async signUp(username: string, password: string, userAttributes?: UserAttribute[]) {
-    const signUpPayload = {
+    const signUpRequest: SignUpRequest = {
       ClientId: this.userPoolClientId,
       Username: username,
       Password: password,
-      UserAttributes: userAttributes
+      UserAttributes: userAttributes,
+      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
     };
 
-    const data = await cognitoRequest(signUpPayload, CognitoServiceTarget.SignUp, this.cognitoEndpoint);
+    const data = await cognitoRequest(signUpRequest, CognitoServiceTarget.SignUp, this.cognitoEndpoint);
 
     return {
       id: data.UserSub as string,
@@ -608,13 +633,14 @@ export class CognitoClient {
    * @throws {ConfirmSignUpException}
    */
   async confirmSignUp(username: string, code: string) {
-    const confirmSignUpPayload = {
+    const confirmSignUpRequest: ConfirmSignUpRequest = {
       ClientId: this.userPoolClientId,
       ConfirmationCode: code,
-      Username: username
+      Username: username,
+      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
     };
 
-    await cognitoRequest(confirmSignUpPayload, CognitoServiceTarget.ConfirmSignUp, this.cognitoEndpoint);
+    await cognitoRequest(confirmSignUpRequest, CognitoServiceTarget.ConfirmSignUp, this.cognitoEndpoint);
   }
 
   /**
@@ -691,12 +717,13 @@ export class CognitoClient {
    * @throws {ForgotPasswordException}
    */
   async forgotPassword(username: string) {
-    const forgotPasswordPayload = {
+    const forgotPasswordRequest: ForgotPasswordRequest = {
       ClientId: this.userPoolClientId,
-      Username: username
+      Username: username,
+      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
     };
 
-    await cognitoRequest(forgotPasswordPayload, CognitoServiceTarget.ForgotPassword, this.cognitoEndpoint);
+    await cognitoRequest(forgotPasswordRequest, CognitoServiceTarget.ForgotPassword, this.cognitoEndpoint);
   }
 
   /**
@@ -709,15 +736,16 @@ export class CognitoClient {
    * @throws {ConfirmForgotPasswordException}
    */
   async confirmForgotPassword(username: string, newPassword: string, confirmationCode: string) {
-    const confirmForgotPasswordPayload = {
+    const confirmForgotPasswordRequest: ConfirmForgotPasswordRequest = {
       ClientId: this.userPoolClientId,
       Username: username,
       ConfirmationCode: confirmationCode,
-      Password: newPassword
+      Password: newPassword,
+      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
     };
 
     await cognitoRequest(
-      confirmForgotPasswordPayload,
+      confirmForgotPasswordRequest,
       CognitoServiceTarget.ConfirmForgotPassword,
       this.cognitoEndpoint
     );
@@ -730,13 +758,14 @@ export class CognitoClient {
    * @throws {ResendConfirmationCodeException}
    */
   async resendConfirmationCode(username: string) {
-    const resendConfirmationCodePayLoad = {
+    const resendConfirmationCodeRequest: ResendConfirmationCodeRequest = {
       ClientId: this.userPoolClientId,
-      Username: username
+      Username: username,
+      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
     };
 
     await cognitoRequest(
-      resendConfirmationCodePayLoad,
+      resendConfirmationCodeRequest,
       CognitoServiceTarget.ResendConfirmationCode,
       this.cognitoEndpoint
     );
