@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import { CognitoCommonException, CognitoError, CognitoException } from './error.js';
 
 import {
+  calculateSecretHash,
   calculateSignature,
   calculateU,
   decodeJwt,
@@ -12,6 +13,169 @@ import {
   getPasswordAuthenticationKey,
   randomBytes
 } from './utils.js';
+
+export interface AuthIntiBaseRequest {
+  AnalyticsMetadata?: {
+    AnalyticsEndpointId?: string;
+  };
+  ClientId: string;
+  ClientMetadata?: Record<string, string>;
+  UserContextData?: {
+    EncodedData?: string;
+    IpAddress?: string;
+  };
+}
+
+export interface AuthIntiUserSrpRequest extends AuthIntiBaseRequest {
+  AuthFlow: 'USER_SRP_AUTH';
+  AuthParameters: {
+    USERNAME: string;
+    SRP_A: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface AuthIntiUserPasswordRequest extends AuthIntiBaseRequest {
+  AuthFlow: 'USER_PASSWORD_AUTH';
+  AuthParameters: {
+    USERNAME: string;
+    PASSWORD: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface AuthIntiRefreshTokenRequest extends AuthIntiBaseRequest {
+  AuthFlow: 'REFRESH_TOKEN_AUTH';
+  AuthParameters: {
+    REFRESH_TOKEN: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface AuthIntiCustomAuthRequest extends AuthIntiBaseRequest {
+  AuthFlow: 'CUSTOM_AUTH';
+  AuthParameters: {
+    USERNAME: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export type AuthIntiRequest =
+  | AuthIntiUserSrpRequest
+  | AuthIntiRefreshTokenRequest
+  | AuthIntiCustomAuthRequest
+  | AuthIntiUserPasswordRequest;
+
+export interface RespondToAuthChallengeBaseRequest {
+  ClientId: string;
+  ClientMetadata?: Record<string, string>;
+  AnalyticsMetadata?: {
+    AnalyticsEndpointId: string;
+  };
+  Session?: string;
+  UserContextData?: {
+    EncodedData?: string;
+    IpAddress?: string;
+  };
+}
+
+export interface RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'PASSWORD_VERIFIER';
+  ChallengeResponses: {
+    USERNAME: string;
+    PASSWORD_CLAIM_SECRET_BLOCK: string;
+    PASSWORD_CLAIM_SIGNATURE: string;
+    TIMESTAMP: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'SMS_MFA';
+  ChallengeResponses: {
+    USERNAME: string;
+    SMS_MFA_CODE: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeCustomChallengeNameRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'CUSTOM_CHALLENGE';
+  ChallengeResponses: {
+    USERNAME: string;
+    ANSWER: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeNewPasswordRequiredRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'NEW_PASSWORD_REQUIRED';
+  ChallengeResponses: {
+    USERNAME: string;
+    NEW_PASSWORD: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'SOFTWARE_TOKEN_MFA';
+  ChallengeResponses: {
+    USERNAME: string;
+    SOFTWARE_TOKEN_MFA_CODE: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'DEVICE_SRP_AUTH';
+  ChallengeResponses: {
+    USERNAME: string;
+    SRP_A: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeDevicePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'DEVICE_PASSWORD_VERIFIER';
+  ChallengeResponses: {
+    USERNAME: string;
+    PASSWORD_CLAIM_SECRET_BLOCK: string;
+    PASSWORD_CLAIM_SIGNATURE: string;
+    TIMESTAMP: string;
+    DEVICE_KEY: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'MFA_SETUP';
+  ChallengeResponses: {
+    USERNAME: string;
+    SMS_MFA_CODE?: string;
+    SOFTWARE_TOKEN_MFA_CODE?: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'SELECT_MFA_TYPE';
+  ChallengeResponses: {
+    USERNAME: string;
+    SOFTWARE_TOKEN_MFA_CODE?: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export type RespondToAuthChallengeRequest =
+  | RespondToAuthChallengePasswordVerifierRequest
+  | RespondToAuthChallengeSmsMfaRequest
+  | RespondToAuthChallengeCustomChallengeNameRequest
+  | RespondToAuthChallengeNewPasswordRequiredRequest
+  | RespondToAuthChallengeSoftwareTokenMfaRequest
+  | RespondToAuthChallengeDeviceSrpAuthRequest
+  | RespondToAuthChallengeDevicePasswordVerifierRequest
+  | RespondToAuthChallengeMfaSetupRequest
+  | RespondToAuthChallengeSelectMfaTypeRequest;
 
 export interface UserAttribute {
   Name: string;
@@ -66,6 +230,11 @@ export interface CognitoClientProps {
    * Cognito OAuth related options. See @see OAuthProps .
    */
   oAuth2?: OAuth2Props;
+
+  /**
+   * Optional Cognito User Pool Client Secret.
+   */
+  clientSecret?: string;
 }
 
 /**
@@ -246,15 +415,16 @@ export class CognitoClient {
   private readonly cognitoEndpoint: string;
   private readonly cognitoPoolName: string;
   private readonly userPoolClientId: string;
-
   private readonly oAuth?: OAuth2Props;
+  private readonly clientSecret?: string;
 
-  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth }: CognitoClientProps) {
+  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth, clientSecret }: CognitoClientProps) {
     const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split('_');
     this.cognitoEndpoint = (endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`).replace(/\/$/, '');
     this.cognitoPoolName = cognitoPoolName;
     this.userPoolClientId = userPoolClientId;
     this.oAuth = oAuth;
+    this.clientSecret = clientSecret;
   }
 
   static getDecodedTokenFromSession(session: Session): DecodedTokens {
@@ -280,7 +450,7 @@ export class CognitoClient {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
-    const initiateAuthPayload = {
+    const initiateAuthPayload: AuthIntiRequest = {
       AuthFlow: 'USER_SRP_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
@@ -289,6 +459,14 @@ export class CognitoClient {
       },
       ClientMetadata: {}
     };
+
+    if (this.clientSecret) {
+      initiateAuthPayload.AuthParameters.SECRET_HASH = calculateSecretHash(
+        this.clientSecret,
+        this.userPoolClientId,
+        username
+      );
+    }
 
     const challenge = (await cognitoRequest(
       initiateAuthPayload,
@@ -317,7 +495,7 @@ export class CognitoClient {
       hkdf
     );
 
-    const respondToAuthChallengePayload = {
+    const respondToAuthChallengeRequest: RespondToAuthChallengeRequest = {
       ChallengeName: 'PASSWORD_VERIFIER',
       ClientId: this.userPoolClientId,
       ChallengeResponses: {
@@ -329,8 +507,16 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
+    if (this.clientSecret) {
+      respondToAuthChallengeRequest.ChallengeResponses.SECRET_HASH = calculateSecretHash(
+        this.clientSecret,
+        this.userPoolClientId,
+        challenge.ChallengeParameters.USER_ID_FOR_SRP
+      );
+    }
+
     const { AuthenticationResult } = await cognitoRequest(
-      respondToAuthChallengePayload,
+      respondToAuthChallengeRequest,
       CognitoServiceTarget.RespondToAuthChallenge,
       this.cognitoEndpoint
     );
@@ -348,7 +534,7 @@ export class CognitoClient {
    * @throws {InitiateAuthException}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
-    const initiateAuthPayload = {
+    const initiateAuthPayload: AuthIntiRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
@@ -376,7 +562,7 @@ export class CognitoClient {
    * @throws {InitiateAuthException}
    */
   public async refreshSession(refreshToken: string): Promise<Session> {
-    const refreshTokenPayload = {
+    const refreshTokenPayload: AuthIntiRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
