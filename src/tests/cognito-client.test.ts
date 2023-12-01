@@ -15,6 +15,7 @@ import { vi } from 'vitest';
 import createFetchMock from 'vitest-fetch-mock';
 import { beforeEach } from 'vitest';
 import { CognitoError, CognitoException } from '../error.js';
+import { UserPoolClientType, UserPoolType } from '@aws-sdk/client-cognito-identity-provider';
 
 const fetchMocker = createFetchMock(vi);
 
@@ -29,22 +30,23 @@ describe('Cognito Client', () => {
     scopes: ['email openid']
   };
 
-  let userPoolConfig: { userPoolClientId: string; userPoolId: string } = {
-    userPoolClientId: '',
-    userPoolId: ''
-  };
+  let userPoolClient: UserPoolClientType;
+  let userPool: UserPoolType;
 
   beforeAll(async () => {
     const cognitoPort = 9229;
     container = await new GenericContainer('jagregory/cognito-local').withExposedPorts(cognitoPort).start();
     const cognitoEndpoint = `http://localhost:${container.getMappedPort(cognitoPort)}`;
 
-    userPoolConfig = await setupCognito(cognitoEndpoint);
+    const cognitoResult = await setupCognito(cognitoEndpoint);
+
+    userPoolClient = cognitoResult.userPoolClient;
+    userPool = cognitoResult.userPool;
 
     cognitoClient = new CognitoClient({
-      userPoolId: userPoolConfig.userPoolId,
-      userPoolClientId: userPoolConfig.userPoolClientId,
-
+      userPoolId: userPool.Id!,
+      userPoolClientId: userPoolClient.ClientId!,
+      clientSecret: userPoolClient.ClientSecret!,
       endpoint: cognitoEndpoint,
       oAuth2: oAuth2
     });
@@ -93,7 +95,7 @@ describe('Cognito Client', () => {
 
       expect(searchParams.get('redirect_uri')).toBe(oAuth2.redirectUrl);
       expect(searchParams.get('response_type')).toBe(oAuth2.responseType);
-      expect(searchParams.get('client_id')).toBe(userPoolConfig.userPoolClientId);
+      expect(searchParams.get('client_id')).toBe(userPoolClient.ClientId!);
       expect(searchParams.get('scope')).toBe(oAuth2.scopes.join(' '));
       expect(searchParams.get('state')).toBe(state);
       expect(searchParams.get('code_challenge')).toBeDefined();

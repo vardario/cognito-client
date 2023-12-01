@@ -168,3 +168,15 @@ export async function randomBytes(num: number) {
 export function formatTimestamp(date: Date) {
   return formatInTimeZone(date, 'UTC', "EEE MMM d HH:mm:ss 'UTC' yyyy");
 }
+
+export function calculateSecretHash(clientSecret: string, userPoolClientId: string, username: string) {
+  const message = `${username}${userPoolClientId}`;
+  const hash = Buffer.from(
+    hashJs
+      .hmac(hashJs.sha256 as any, clientSecret)
+      .update(message)
+      .digest()
+  ).toString('base64');
+
+  return hash;
+}

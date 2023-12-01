@@ -59,7 +59,8 @@ export async function setupCognito(endpoint: string) {
   const createUserPoolClientResult = await awsCognitoClient.send(
     new CreateUserPoolClientCommand({
       ClientName: 'TestClient',
-      UserPoolId: createPoolResult.UserPool?.Id
+      UserPoolId: createPoolResult.UserPool?.Id,
+      GenerateSecret: true
     })
   );
 
@@ -91,8 +92,8 @@ export async function setupCognito(endpoint: string) {
   );
 
   return {
-    userPoolId: createPoolResult.UserPool?.Id as string,
-    userPoolClientId: createUserPoolClientResult.UserPoolClient?.ClientId as string
+    userPool: createPoolResult.UserPool!,
+    userPoolClient: createUserPoolClientResult.UserPoolClient!
   };
 }
 
