@@ -198,5 +198,25 @@ describe('Cognito Client', () => {
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
       new CognitoError('test', 'code' as CognitoException)
     );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
+      new CognitoError('test', 'code' as CognitoException)
+    );
   });
 });
