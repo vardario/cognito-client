@@ -455,18 +455,11 @@ export class CognitoClient {
       ClientId: this.userPoolClientId,
       AuthParameters: {
         USERNAME: username,
-        SRP_A: A.toString(16)
+        SRP_A: A.toString(16),
+        SECRET_HASH: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
       },
       ClientMetadata: {}
     };
-
-    if (this.clientSecret) {
-      initiateAuthPayload.AuthParameters.SECRET_HASH = calculateSecretHash(
-        this.clientSecret,
-        this.userPoolClientId,
-        username
-      );
-    }
 
     const challenge = (await cognitoRequest(
       initiateAuthPayload,
@@ -502,18 +495,13 @@ export class CognitoClient {
         PASSWORD_CLAIM_SECRET_BLOCK: challenge.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
         USERNAME: challenge.ChallengeParameters.USER_ID_FOR_SRP,
-        TIMESTAMP: timeStamp
+        TIMESTAMP: timeStamp,
+        SECRET_HASH:
+          this.clientSecret &&
+          calculateSecretHash(this.clientSecret, this.userPoolClientId, challenge.ChallengeParameters.USER_ID_FOR_SRP)
       },
       ClientMetadata: {}
     };
-
-    if (this.clientSecret) {
-      respondToAuthChallengeRequest.ChallengeResponses.SECRET_HASH = calculateSecretHash(
-        this.clientSecret,
-        this.userPoolClientId,
-        challenge.ChallengeParameters.USER_ID_FOR_SRP
-      );
-    }
 
     const { AuthenticationResult } = await cognitoRequest(
       respondToAuthChallengeRequest,
@@ -539,7 +527,8 @@ export class CognitoClient {
       ClientId: this.userPoolClientId,
       AuthParameters: {
         USERNAME: username,
-        PASSWORD: password
+        PASSWORD: password,
+        SECRET_HASH: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
       },
       ClientMetadata: {}
     };
@@ -558,15 +547,18 @@ export class CognitoClient {
    * Returns a new session based on the given refresh token.
    *
    * @param refreshToken
+   * @param username
    * @returns @see Session
    * @throws {InitiateAuthException}
    */
-  public async refreshSession(refreshToken: string): Promise<Session> {
+  public async refreshSession(refreshToken: string, username?: string): Promise<Session> {
     const refreshTokenPayload: AuthIntiRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
-        REFRESH_TOKEN: refreshToken
+        REFRESH_TOKEN: refreshToken,
+        SECRET_HASH:
+          this.clientSecret && username && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
       },
       ClientMetadata: {}
     };
