@@ -130,23 +130,21 @@ async function cognitoClientTestWorkflow(client: CognitoClient) {
 }
 
 describe('cognito client integration test', () => {
-  // test('cognito client with client secret', async () => {
-  //   await cognitoClientTestWorkflow(
-  //     new CognitoClient({
-  //       userPoolId: process.env.COGNITO_USER_POOL_ID!,
-  //       userPoolClientId: process.env.COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID!,
-  //       clientSecret: process.env.COGNITO_USER_POOL_CLIENT_SECRET!
-  //     })
-  //   );
-  // });
-  // test('cognito client without client secret', async () => {
-  //   await cognitoClientTestWorkflow(
-  //     new CognitoClient({
-  //       userPoolId: process.env.COGNITO_USER_POOL_ID!,
-  //       userPoolClientId: process.env.COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID!
-  //     })
-  //   );
-  // });
-
-  test('cognito client with client secret', async () => {});
+  test('cognito client with client secret', async () => {
+    await cognitoClientTestWorkflow(
+      new CognitoClient({
+        userPoolId: process.env.COGNITO_USER_POOL_ID!,
+        userPoolClientId: process.env.COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID!,
+        clientSecret: process.env.COGNITO_USER_POOL_CLIENT_SECRET!
+      })
+    );
+  });
+  test('cognito client without client secret', async () => {
+    await cognitoClientTestWorkflow(
+      new CognitoClient({
+        userPoolId: process.env.COGNITO_USER_POOL_ID!,
+        userPoolClientId: process.env.COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID!
+      })
+    );
+  });
 });
