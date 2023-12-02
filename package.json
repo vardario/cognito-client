@@ -16,9 +16,9 @@
   "scripts": {
     "build": "tsc --build",
     "format": "prettier --plugin-search-dir . --write . && prettier-package-json --write && eslint --fix .",
-    "integration-test": "vitest --run integration",
+    "integration-test": "vitest run integration",
     "prepare": "husky install",
-    "test": "vitest run",
+    "test": "vitest run unit",
     "watch": "tsc --build --watch"
   },
   "dependencies": {
