@@ -27,18 +27,16 @@ jobs:
         with:
           role-to-assume: ${{ secrets.INTEGRATION_TEST_ROLE_ARN }}
           aws-region: ${{ secrets.REGION }}
-      - run: pnpm integration-test
-        env:
-          EMAIL: ${{ secrets.EMAIL }}
-          PASSWORD: ${{ secrets.PASSWORD }}
-          NEW_PASSWORD: ${{ secrets.NEW_PASSWORD }}
-          GIVEN_NAME: ${{ secrets.GIVEN_NAME }}
-          FAMILY_NAME: ${{ secrets.FAMILY_NAME }}
-          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID_ID: ${{ secrets.COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID }}
-          COGNITO_USER_POOL_CLIENT_SECRET: ${{ secrets.COGNITO_USER_POOL_CLIENT_SECRET }}
-          COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID: ${{ secrets.COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID }}
-          REGION: ${{ secrets.REGION }}
+      - run: EMAIL=${{ secrets.EMAIL }}
+          PASSWORD=${{ secrets.PASSWORD }}
+          NEW_PASSWORD=${{ secrets.NEW_PASSWORD }}
+          GIVEN_NAME=${{ secrets.GIVEN_NAME }}
+          FAMILY_NAME=${{ secrets.FAMILY_NAME }}
+          COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID_ID= ${{ secrets.COGNITO_USER_POOL_WITH_SECRET_CLIENT_ID }}
+          COGNITO_USER_POOL_CLIENT_SECRET=${{ secrets.COGNITO_USER_POOL_CLIENT_SECRET }}
+          COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID=${{ secrets.COGNITO_USER_POOL_WITHOUT_SECRET_CLIENT_ID }}
+          REGION=${{ secrets.REGION }} pnpm integration-test
       - run: pnpm semantic-release
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
