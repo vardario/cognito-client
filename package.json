@@ -28,6 +28,7 @@
     "jsbn": "^1.1.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.465.0",
     "@types/jsbn": "^1.2.33",
     "@types/jsdom": "^21.1.5",
     "@types/randombytes": "^2.0.3",
