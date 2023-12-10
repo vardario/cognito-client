@@ -14,8 +14,9 @@ import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 import { vi } from 'vitest';
 import createFetchMock from 'vitest-fetch-mock';
 import { beforeEach } from 'vitest';
-import { CognitoError, CognitoException } from '../error.js';
+
 import { UserPoolClientType, UserPoolType } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoInitAuthError, InitiateAuthException } from '../error.js';
 
 const fetchMocker = createFetchMock(vi);
 
@@ -196,27 +197,27 @@ describe('Cognito Client', () => {
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new CognitoError('test', 'code' as CognitoException)
+      new CognitoInitAuthError('test', 'code' as InitiateAuthException)
     );
   });
 });

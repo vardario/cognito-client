@@ -1,7 +1,33 @@
 import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
 import { Buffer } from 'buffer';
-import { CognitoCommonException, CognitoError, CognitoException } from './error.js';
+import {
+  ChangePasswordException,
+  CognitoChangePasswordError,
+  CognitoCommonException,
+  CognitoConfirmForgotPasswordError,
+  CognitoConfirmSignUpError,
+  CognitoForgotPasswordError,
+  CognitoGlobalSignOutError,
+  CognitoInitAuthError,
+  CognitoResendConfirmationCodeError,
+  CognitoRespondToAuthChallengeError,
+  CognitoRevokeTokenError,
+  CognitoSignUpError,
+  CognitoUpdateUserAttributesError,
+  CognitoVerifyUserAttributeError,
+  ConfirmForgotPasswordException,
+  ConfirmSignUpException,
+  ForgotPasswordException,
+  GlobalSignOutException,
+  InitiateAuthException,
+  ResendConfirmationException,
+  RespondToAuthChallengeException,
+  RevokeTokenException,
+  SignUpException,
+  UpdateUserAttributesException,
+  VerifyUserAttributeException
+} from './error.js';
 
 import {
   calculateSecretHash,
@@ -430,7 +456,32 @@ export async function cognitoRequest(body: object, serviceTarget: CognitoService
       CognitoCommonException.Unknown
   );
 
-  throw new CognitoError(errorMessage, cognitoException as CognitoException);
+  switch (serviceTarget) {
+    case CognitoServiceTarget.InitiateAuth:
+      throw new CognitoInitAuthError(errorMessage, cognitoException as InitiateAuthException);
+    case CognitoServiceTarget.RespondToAuthChallenge:
+      throw new CognitoRespondToAuthChallengeError(errorMessage, cognitoException as RespondToAuthChallengeException);
+    case CognitoServiceTarget.SignUp:
+      throw new CognitoSignUpError(errorMessage, cognitoException as SignUpException);
+    case CognitoServiceTarget.ConfirmSignUp:
+      throw new CognitoConfirmSignUpError(errorMessage, cognitoException as ConfirmSignUpException);
+    case CognitoServiceTarget.ChangePassword:
+      throw new CognitoChangePasswordError(errorMessage, cognitoException as ChangePasswordException);
+    case CognitoServiceTarget.RevokeToken:
+      throw new CognitoRevokeTokenError(errorMessage, cognitoException as RevokeTokenException);
+    case CognitoServiceTarget.ForgotPassword:
+      throw new CognitoForgotPasswordError(errorMessage, cognitoException as ForgotPasswordException);
+    case CognitoServiceTarget.ConfirmForgotPassword:
+      throw new CognitoConfirmForgotPasswordError(errorMessage, cognitoException as ConfirmForgotPasswordException);
+    case CognitoServiceTarget.ResendConfirmationCode:
+      throw new CognitoResendConfirmationCodeError(errorMessage, cognitoException as ResendConfirmationException);
+    case CognitoServiceTarget.UpdateUserAttributes:
+      throw new CognitoUpdateUserAttributesError(errorMessage, cognitoException as UpdateUserAttributesException);
+    case CognitoServiceTarget.VerifyUserAttribute:
+      throw new CognitoVerifyUserAttributeError(errorMessage, cognitoException as VerifyUserAttributeException);
+    case CognitoServiceTarget.GlobalSignOut:
+      throw new CognitoGlobalSignOutError(errorMessage, cognitoException as GlobalSignOutException);
+  }
 }
 
 /**
