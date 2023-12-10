@@ -520,7 +520,7 @@ export class CognitoClient {
    * @param username Username
    * @param password Password
    *
-   * @throws {InitiateAuthException}
+   * @throws {CognitoInitAuthError, CognitoRespondToAuthChallengeError}
    */
   async authenticateUserSrp(username: string, password: string): Promise<Session> {
     const smallA = await generateSmallA();
@@ -595,7 +595,7 @@ export class CognitoClient {
    *
    * @param username Username
    * @param password Password
-   * @throws {InitiateAuthException}
+   * @throws {CognitoInitAuthError}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
     const initiateAuthPayload: AuthIntiRequest = {
@@ -625,7 +625,7 @@ export class CognitoClient {
    * @param refreshToken  Refresh token from a previous session.
    * @param username Username is required when using a client secret and needs to be the cognito user id.
    * @returns @see Session
-   * @throws {InitiateAuthException}
+   * @throws {CognitoInitAuthError}
    */
   public async refreshSession(refreshToken: string, username?: string): Promise<Session> {
     const refreshTokenPayload: AuthIntiRequest = {
@@ -657,7 +657,7 @@ export class CognitoClient {
    * @param username Username
    * @param password Password
    *
-   * @throws {SignUpException}
+   * @throws {CognitoSignUpError}
    */
   async signUp(username: string, password: string, userAttributes?: UserAttribute[]) {
     const signUpRequest: SignUpRequest = {
@@ -682,7 +682,7 @@ export class CognitoClient {
    * @param username Username
    * @param code Confirmation code the user gets through the registration E-Mail
    *
-   * @throws {ConfirmSignUpException}
+   * @throws {CognitoConfirmSignUpError}
    */
   async confirmSignUp(username: string, code: string) {
     const confirmSignUpRequest: ConfirmSignUpRequest = {
@@ -700,7 +700,7 @@ export class CognitoClient {
    * @param currentPassword Current user password.
    * @param newPassword  New user password.
    *
-   * @throws {ChangePasswordException}
+   * @throws {CognitoChangePasswordError}
    */
   async changePassword(currentPassword: string, newPassword: string, accessToken: string) {
     const changePasswordPayload = {
@@ -718,7 +718,7 @@ export class CognitoClient {
    * @param userAttributes List of user attributes to update.
    * @param accessToken Access token of the current user.
    *
-   * @throws {UpdateUserAttributesException}
+   * @throws {CognitoUpdateUserAttributesError}
    */
   async updateUserAttributes(userAttributes: UserAttribute[], accessToken: string) {
     const updateUserAttributesPayload = {
@@ -736,7 +736,7 @@ export class CognitoClient {
    * @param code  Verification code
    * @param accessToken Access token of the current user.
    *
-   * @throws {VerifyUserAttributeException}
+   * @throws {CognitoVerifyUserAttributeError}
    */
   async verifyUserAttribute(attributeName: string, code: string, accessToken: string) {
     const verifyUserAttributePayload = {
@@ -753,7 +753,7 @@ export class CognitoClient {
    *
    * @param refreshToken Refresh token from a previous session.
    * @param username Username is required when using a client secret and needs to be the cognito user id.
-   * @throws {RevokeTokenException}
+   * @throws {CognitoRevokeTokenError}
    */
   async revokeToken(refreshToken: string) {
     const revokeTokenPayload = {
@@ -769,7 +769,7 @@ export class CognitoClient {
    * Request forgot password.
    * @param username Username
    *
-   * @throws {ForgotPasswordException}
+   * @throws {CognitoForgotPasswordError}
    */
   async forgotPassword(username: string) {
     const forgotPasswordRequest: ForgotPasswordRequest = {
@@ -788,7 +788,7 @@ export class CognitoClient {
    * @param newPassword New password
    * @param confirmationCode Confirmation code which the user got through E-mail
    *
-   * @throws {ConfirmForgotPasswordException}
+   * @throws {CognitoConfirmForgotPasswordError}
    */
   async confirmForgotPassword(username: string, newPassword: string, confirmationCode: string) {
     const confirmForgotPasswordRequest: ConfirmForgotPasswordRequest = {
@@ -810,7 +810,7 @@ export class CognitoClient {
    * Triggers cognito to resend the confirmation code
    * @param username Username
    *
-   * @throws {ResendConfirmationCodeException}
+   * @throws {CognitoResendConfirmationCodeError}
    */
   async resendConfirmationCode(username: string) {
     const resendConfirmationCodeRequest: ResendConfirmationCodeRequest = {
