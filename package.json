@@ -56,5 +56,10 @@
     ],
     "package.json": "prettier-package-json --write"
   },
-  "packageManager": "pnpm@8.10.5"
+  "packageManager": "pnpm@8.10.5",
+  "release": {
+    "branches": [
+      "release"
+    ]
+  }
 }
