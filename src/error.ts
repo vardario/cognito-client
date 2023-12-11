@@ -1,3 +1,31 @@
+export enum CommonException {
+  AccessDeniedException = 'AccessDeniedException',
+  IncompleteSignature = 'IncompleteSignature',
+  InternalFailure = 'InternalFailure',
+  InvalidAction = 'InvalidAction',
+  InvalidClientTokenId = 'InvalidClientTokenId',
+  NotAuthorized = 'NotAuthorized',
+  OptInRequired = 'OptInRequired',
+  RequestExpired = 'RequestExpired',
+  ServiceUnavailable = 'ServiceUnavailable',
+  ThrottlingException = 'ThrottlingException',
+  ValidationError = 'ValidationError'
+}
+
+export const COMMON_EXCEPTIONS = [
+  CommonException.AccessDeniedException,
+  CommonException.IncompleteSignature,
+  CommonException.InternalFailure,
+  CommonException.InvalidAction,
+  CommonException.InvalidClientTokenId,
+  CommonException.NotAuthorized,
+  CommonException.OptInRequired,
+  CommonException.RequestExpired,
+  CommonException.ServiceUnavailable,
+  CommonException.ThrottlingException,
+  CommonException.ValidationError
+];
+
 export enum AssociateSoftwareTokenException {
   ConcurrentModificationException = 'ConcurrentModificationException',
   ForbiddenException = 'ForbiddenException',
@@ -373,7 +401,22 @@ export enum RevokeTokenException {
   UnsupportedTokenTypeException = 'UnsupportedTokenTypeException'
 }
 
-export class InitAuthError extends Error {
+export class CognitoError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class CommonError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: CommonException
+  ) {
+    super(message);
+  }
+}
+
+export class InitAuthError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: InitiateAuthException
@@ -382,7 +425,7 @@ export class InitAuthError extends Error {
   }
 }
 
-export class RespondToAuthChallengeError extends Error {
+export class RespondToAuthChallengeError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: RespondToAuthChallengeException
@@ -391,7 +434,7 @@ export class RespondToAuthChallengeError extends Error {
   }
 }
 
-export class SignUpError extends Error {
+export class SignUpError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: SignUpException
@@ -400,7 +443,7 @@ export class SignUpError extends Error {
   }
 }
 
-export class ConfirmSignUpError extends Error {
+export class ConfirmSignUpError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: ConfirmSignUpException
@@ -409,7 +452,7 @@ export class ConfirmSignUpError extends Error {
   }
 }
 
-export class ChangePasswordError extends Error {
+export class ChangePasswordError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: ChangePasswordException
@@ -418,7 +461,7 @@ export class ChangePasswordError extends Error {
   }
 }
 
-export class RevokeTokenError extends Error {
+export class RevokeTokenError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: RevokeTokenException
@@ -427,7 +470,7 @@ export class RevokeTokenError extends Error {
   }
 }
 
-export class ForgotPasswordError extends Error {
+export class ForgotPasswordError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: ForgotPasswordException
@@ -436,7 +479,7 @@ export class ForgotPasswordError extends Error {
   }
 }
 
-export class ConfirmForgotPasswordError extends Error {
+export class ConfirmForgotPasswordError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: ConfirmForgotPasswordException
@@ -445,7 +488,7 @@ export class ConfirmForgotPasswordError extends Error {
   }
 }
 
-export class ResendConfirmationCodeError extends Error {
+export class ResendConfirmationCodeError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: ResendConfirmationException
@@ -454,7 +497,7 @@ export class ResendConfirmationCodeError extends Error {
   }
 }
 
-export class UpdateUserAttributesError extends Error {
+export class UpdateUserAttributesError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: UpdateUserAttributesException
@@ -463,7 +506,7 @@ export class UpdateUserAttributesError extends Error {
   }
 }
 
-export class VerifyUserAttributeError extends Error {
+export class VerifyUserAttributeError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: VerifyUserAttributeException
@@ -472,7 +515,7 @@ export class VerifyUserAttributeError extends Error {
   }
 }
 
-export class GlobalSignOutError extends Error {
+export class GlobalSignOutError extends CognitoError {
   constructor(
     message: string,
     public readonly cognitoException: GlobalSignOutException
