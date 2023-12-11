@@ -25,7 +25,10 @@ import {
   RevokeTokenException,
   SignUpException,
   UpdateUserAttributesException,
-  VerifyUserAttributeException
+  VerifyUserAttributeException,
+  COMMON_EXCEPTIONS,
+  CommonError,
+  CommonException
 } from './error.js';
 
 import {
@@ -454,6 +457,10 @@ export async function cognitoRequest(body: object, serviceTarget: ServiceTarget,
       cognitoResponseBody.__type ??
       'Unknown'
   );
+
+  if (COMMON_EXCEPTIONS.includes(cognitoException as CommonException)) {
+    throw new CommonError(errorMessage, cognitoException as CommonException);
+  }
 
   switch (serviceTarget) {
     case ServiceTarget.InitiateAuth:

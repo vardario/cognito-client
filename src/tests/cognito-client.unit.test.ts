@@ -40,7 +40,9 @@ import {
   RevokeTokenException,
   SignUpException,
   UpdateUserAttributesException,
-  VerifyUserAttributeException
+  VerifyUserAttributeException,
+  COMMON_EXCEPTIONS,
+  CommonError
 } from '../error.js';
 
 const fetchMocker = createFetchMock(vi);
@@ -302,5 +304,25 @@ describe('Cognito Client', () => {
     expect(cognitoRequest({}, ServiceTarget.GlobalSignOut, 'http://localhost')).rejects.toThrowError(
       new GlobalSignOutError('test', 'code' as GlobalSignOutException)
     );
+
+    COMMON_EXCEPTIONS.forEach(exception => {
+      fetchMocker.mockResponse(
+        JSON.stringify({
+          message: 'test',
+          code: exception
+        }),
+        {
+          status: 400,
+          headers: {
+            'X-Amzn-ErrorMessage': 'test',
+            'X-Amzn-ErrorType': exception
+          }
+        }
+      );
+
+      expect(cognitoRequest({}, ServiceTarget.RespondToAuthChallenge, 'http://localhost')).rejects.toThrowError(
+        new CommonError('test', exception)
+      );
+    });
   });
 });
