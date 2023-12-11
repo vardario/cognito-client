@@ -16,7 +16,32 @@ import createFetchMock from 'vitest-fetch-mock';
 import { beforeEach } from 'vitest';
 
 import { UserPoolClientType, UserPoolType } from '@aws-sdk/client-cognito-identity-provider';
-import { CognitoInitAuthError, InitiateAuthException } from '../error.js';
+import {
+  ChangePasswordException,
+  CognitoChangePasswordError,
+  CognitoConfirmForgotPasswordError,
+  CognitoConfirmSignUpError,
+  CognitoForgotPasswordError,
+  CognitoGlobalSignOutError,
+  CognitoInitAuthError,
+  CognitoResendConfirmationCodeError,
+  CognitoRespondToAuthChallengeError,
+  CognitoRevokeTokenError,
+  CognitoSignUpError,
+  CognitoUpdateUserAttributesError,
+  CognitoVerifyUserAttributeError,
+  ConfirmForgotPasswordException,
+  ConfirmSignUpException,
+  ForgotPasswordException,
+  GlobalSignOutException,
+  InitiateAuthException,
+  ResendConfirmationException,
+  RespondToAuthChallengeException,
+  RevokeTokenException,
+  SignUpException,
+  UpdateUserAttributesException,
+  VerifyUserAttributeException
+} from '../error.js';
 
 const fetchMocker = createFetchMock(vi);
 
@@ -218,6 +243,64 @@ describe('Cognito Client', () => {
 
     expect(cognitoRequest({}, CognitoServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
       new CognitoInitAuthError('test', 'code' as InitiateAuthException)
+    );
+
+    fetchMocker.mockResponse(
+      JSON.stringify({
+        message: 'test',
+        code: 'code'
+      }),
+      {
+        status: 400,
+        headers: {
+          'X-Amzn-ErrorMessage': 'test',
+          'X-Amzn-ErrorType': 'code'
+        }
+      }
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.RespondToAuthChallenge, 'http://localhost')).rejects.toThrowError(
+      new CognitoRespondToAuthChallengeError('test', 'code' as RespondToAuthChallengeException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.SignUp, 'http://localhost')).rejects.toThrowError(
+      new CognitoSignUpError('test', 'code' as SignUpException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.ConfirmSignUp, 'http://localhost')).rejects.toThrowError(
+      new CognitoConfirmSignUpError('test', 'code' as ConfirmSignUpException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.ChangePassword, 'http://localhost')).rejects.toThrowError(
+      new CognitoChangePasswordError('test', 'code' as ChangePasswordException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.RevokeToken, 'http://localhost')).rejects.toThrowError(
+      new CognitoRevokeTokenError('test', 'code' as RevokeTokenException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.ForgotPassword, 'http://localhost')).rejects.toThrowError(
+      new CognitoForgotPasswordError('test', 'code' as ForgotPasswordException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.ConfirmForgotPassword, 'http://localhost')).rejects.toThrowError(
+      new CognitoConfirmForgotPasswordError('test', 'code' as ConfirmForgotPasswordException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.ResendConfirmationCode, 'http://localhost')).rejects.toThrowError(
+      new CognitoResendConfirmationCodeError('test', 'code' as ResendConfirmationException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.UpdateUserAttributes, 'http://localhost')).rejects.toThrowError(
+      new CognitoUpdateUserAttributesError('test', 'code' as UpdateUserAttributesException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.VerifyUserAttribute, 'http://localhost')).rejects.toThrowError(
+      new CognitoVerifyUserAttributeError('test', 'code' as VerifyUserAttributeException)
+    );
+
+    expect(cognitoRequest({}, CognitoServiceTarget.GlobalSignOut, 'http://localhost')).rejects.toThrowError(
+      new CognitoGlobalSignOutError('test', 'code' as GlobalSignOutException)
     );
   });
 });
