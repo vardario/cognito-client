@@ -1,7 +1,3 @@
-export enum CognitoCommonException {
-  Unknown = 'Unknown'
-}
-
 export enum AssociateSoftwareTokenException {
   ConcurrentModificationException = 'ConcurrentModificationException',
   ForbiddenException = 'ForbiddenException',
@@ -377,38 +373,109 @@ export enum RevokeTokenException {
   UnsupportedTokenTypeException = 'UnsupportedTokenTypeException'
 }
 
-export type CognitoException =
-  | AssociateSoftwareTokenException
-  | ChangePasswordException
-  | ConfirmDeviceException
-  | ConfirmForgotPasswordException
-  | ConfirmSignUpException
-  | DeleteUserAttributesException
-  | DeleteUserException
-  | ForgetDeviceException
-  | ForgotPasswordException
-  | GetUserException
-  | GetIdException
-  | GetCredentialsForIdentityException
-  | GetUserAttributeVerificationException
-  | GlobalSignOutException
-  | InitiateAuthException
-  | ResendConfirmationException
-  | RespondToAuthChallengeException
-  | SetUserMFAPreferenceException
-  | SignUpException
-  | UpdateUserAttributesException
-  | VerifySoftwareTokenException
-  | VerifyUserAttributeException
-  | UpdateDeviceStatusException
-  | ListDevicesException
-  | CognitoCommonException
-  | RevokeTokenException;
-
-export class CognitoError extends Error {
+export class InitAuthError extends Error {
   constructor(
     message: string,
-    public readonly cognitoException: CognitoException
+    public readonly cognitoException: InitiateAuthException
+  ) {
+    super(message);
+  }
+}
+
+export class RespondToAuthChallengeError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: RespondToAuthChallengeException
+  ) {
+    super(message);
+  }
+}
+
+export class SignUpError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: SignUpException
+  ) {
+    super(message);
+  }
+}
+
+export class ConfirmSignUpError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: ConfirmSignUpException
+  ) {
+    super(message);
+  }
+}
+
+export class ChangePasswordError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: ChangePasswordException
+  ) {
+    super(message);
+  }
+}
+
+export class RevokeTokenError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: RevokeTokenException
+  ) {
+    super(message);
+  }
+}
+
+export class ForgotPasswordError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: ForgotPasswordException
+  ) {
+    super(message);
+  }
+}
+
+export class ConfirmForgotPasswordError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: ConfirmForgotPasswordException
+  ) {
+    super(message);
+  }
+}
+
+export class ResendConfirmationCodeError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: ResendConfirmationException
+  ) {
+    super(message);
+  }
+}
+
+export class UpdateUserAttributesError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: UpdateUserAttributesException
+  ) {
+    super(message);
+  }
+}
+
+export class VerifyUserAttributeError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: VerifyUserAttributeException
+  ) {
+    super(message);
+  }
+}
+
+export class GlobalSignOutError extends Error {
+  constructor(
+    message: string,
+    public readonly cognitoException: GlobalSignOutException
   ) {
     super(message);
   }
