@@ -22,6 +22,7 @@
     "watch": "tsc --build --watch"
   },
   "dependencies": {
+    "@lukeed/csprng": "^1.1.0",
     "buffer": "^6.0.3",
     "date-fns-tz": "^2.0.0",
     "hash.js": "^1.1.7",
