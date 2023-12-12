@@ -2,13 +2,7 @@ import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
 import { Buffer } from 'buffer';
 import formatInTimeZone from 'date-fns-tz/formatInTimeZone';
-
-let crypto: any = globalThis.crypto;
-
-if (!crypto) {
-  const nodeCrypto = await import('node:crypto');
-  crypto = nodeCrypto.webcrypto;
-}
+import { random } from '@lukeed/csprng';
 
 const initN =
   'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1' +
@@ -162,7 +156,7 @@ export function decodeJwt<T = unknown>(jwt: string) {
 }
 
 export async function randomBytes(num: number) {
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(num)));
+  return random(num);
 }
 
 export function formatTimestamp(date: Date) {
