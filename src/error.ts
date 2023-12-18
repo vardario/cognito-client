@@ -419,7 +419,21 @@ export type CognitoErrorType =
 export class CognitoError extends Error {
   constructor(
     message: string,
-    public readonly errorType: CognitoErrorType
+    public readonly errorType: CognitoErrorType,
+    public readonly cognitoException:
+      | CommonException
+      | InitiateAuthException
+      | RespondToAuthChallengeException
+      | SignUpException
+      | ConfirmSignUpException
+      | ChangePasswordException
+      | RevokeTokenException
+      | ForgotPasswordException
+      | ConfirmForgotPasswordException
+      | ResendConfirmationException
+      | UpdateUserAttributesException
+      | VerifyUserAttributeException
+      | GlobalSignOutException
   ) {
     super(message);
   }
@@ -430,7 +444,7 @@ export class CommonError extends CognitoError {
     message: string,
     public readonly cognitoException: CommonException
   ) {
-    super(message, 'CommonError');
+    super(message, 'CommonError', cognitoException);
   }
 }
 
@@ -439,7 +453,7 @@ export class InitAuthError extends CognitoError {
     message: string,
     public readonly cognitoException: InitiateAuthException
   ) {
-    super(message, 'InitAuthError');
+    super(message, 'InitAuthError', cognitoException);
   }
 }
 
@@ -448,7 +462,7 @@ export class RespondToAuthChallengeError extends CognitoError {
     message: string,
     public readonly cognitoException: RespondToAuthChallengeException
   ) {
-    super(message, 'RespondToAuthChallengeError');
+    super(message, 'RespondToAuthChallengeError', cognitoException);
   }
 }
 
@@ -457,7 +471,7 @@ export class SignUpError extends CognitoError {
     message: string,
     public readonly cognitoException: SignUpException
   ) {
-    super(message, 'SignUpError');
+    super(message, 'SignUpError', cognitoException);
   }
 }
 
@@ -466,7 +480,7 @@ export class ConfirmSignUpError extends CognitoError {
     message: string,
     public readonly cognitoException: ConfirmSignUpException
   ) {
-    super(message, 'ConfirmSignUpError');
+    super(message, 'ConfirmSignUpError', cognitoException);
   }
 }
 
@@ -475,7 +489,7 @@ export class ChangePasswordError extends CognitoError {
     message: string,
     public readonly cognitoException: ChangePasswordException
   ) {
-    super(message, 'ChangePasswordError');
+    super(message, 'ChangePasswordError', cognitoException);
   }
 }
 
@@ -484,7 +498,7 @@ export class RevokeTokenError extends CognitoError {
     message: string,
     public readonly cognitoException: RevokeTokenException
   ) {
-    super(message, 'RevokeTokenError');
+    super(message, 'RevokeTokenError', cognitoException);
   }
 }
 
@@ -493,7 +507,7 @@ export class ForgotPasswordError extends CognitoError {
     message: string,
     public readonly cognitoException: ForgotPasswordException
   ) {
-    super(message, 'ForgotPasswordError');
+    super(message, 'ForgotPasswordError', cognitoException);
   }
 }
 
@@ -502,7 +516,7 @@ export class ConfirmForgotPasswordError extends CognitoError {
     message: string,
     public readonly cognitoException: ConfirmForgotPasswordException
   ) {
-    super(message, 'ConfirmForgotPasswordError');
+    super(message, 'ConfirmForgotPasswordError', cognitoException);
   }
 }
 
@@ -511,7 +525,7 @@ export class ResendConfirmationCodeError extends CognitoError {
     message: string,
     public readonly cognitoException: ResendConfirmationException
   ) {
-    super(message, 'ResendConfirmationCodeError');
+    super(message, 'ResendConfirmationCodeError', cognitoException);
   }
 }
 
@@ -520,7 +534,7 @@ export class UpdateUserAttributesError extends CognitoError {
     message: string,
     public readonly cognitoException: UpdateUserAttributesException
   ) {
-    super(message, 'UpdateUserAttributesError');
+    super(message, 'UpdateUserAttributesError', cognitoException);
   }
 }
 
@@ -529,7 +543,7 @@ export class VerifyUserAttributeError extends CognitoError {
     message: string,
     public readonly cognitoException: VerifyUserAttributeException
   ) {
-    super(message, 'VerifyUserAttributeError');
+    super(message, 'VerifyUserAttributeError', cognitoException);
   }
 }
 
@@ -538,6 +552,6 @@ export class GlobalSignOutError extends CognitoError {
     message: string,
     public readonly cognitoException: GlobalSignOutException
   ) {
-    super(message, 'GlobalSignOutError');
+    super(message, 'GlobalSignOutError', cognitoException);
   }
 }
