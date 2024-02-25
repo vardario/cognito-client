@@ -13,7 +13,6 @@ import {
   padHex
 } from '../utils';
 import { BigInteger } from 'jsbn';
-import { Buffer } from 'buffer';
 
 describe('Utils Test', () => {
   test('padHex', () => {
@@ -28,10 +27,10 @@ describe('Utils Test', () => {
   });
 
   test('hashBuffer', async () => {
-    expect(await hashBuffer(Buffer.from([0xff]))).toBe(
+    expect(await hashBuffer(new Uint8Array([0xff]))).toBe(
       'a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89'
     );
-    expect(await hashBuffer(Buffer.from([0x01, 0x23]))).toBe(
+    expect(await hashBuffer(new Uint8Array([0x01, 0x23]))).toBe(
       'b71de80778f2783383f5d5a3028af84eab2f18a4eb38968172ca41724dd4b3f4'
     );
   });
