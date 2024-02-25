@@ -1,6 +1,5 @@
-import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
-import { Buffer } from 'buffer';
+
 import {
   ChangePasswordException,
   ChangePasswordError,
@@ -36,10 +35,13 @@ import {
   calculateSignature,
   calculateU,
   decodeJwt,
+  digest,
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
-  randomBytes
+  randomBytes,
+  uint8ArrayFromString,
+  uint8ArrayToBase64String
 } from './utils.js';
 
 export interface CognitoBaseRequest {
@@ -538,7 +540,8 @@ export class CognitoClient {
       AuthParameters: {
         USERNAME: username,
         SRP_A: A.toString(16),
-        SECRET_HASH: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+        SECRET_HASH:
+          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
       },
       ClientMetadata: {}
     };
@@ -551,9 +554,9 @@ export class CognitoClient {
 
     const B = new BigInteger(challenge.ChallengeParameters.SRP_B, 16);
     const salt = new BigInteger(challenge.ChallengeParameters.SALT, 16);
-    const U = calculateU(A, B);
+    const U = await calculateU(A, B);
 
-    const hkdf = getPasswordAuthenticationKey(
+    const hkdf = await getPasswordAuthenticationKey(
       this.cognitoPoolName,
       challenge.ChallengeParameters.USER_ID_FOR_SRP,
       password,
@@ -563,7 +566,7 @@ export class CognitoClient {
       salt
     );
 
-    const { signature, timeStamp } = calculateSignature(
+    const { signature, timeStamp } = await calculateSignature(
       this.cognitoPoolName,
       challenge.ChallengeParameters.USER_ID_FOR_SRP,
       challenge.ChallengeParameters.SECRET_BLOCK,
@@ -580,7 +583,11 @@ export class CognitoClient {
         TIMESTAMP: timeStamp,
         SECRET_HASH:
           this.clientSecret &&
-          calculateSecretHash(this.clientSecret, this.userPoolClientId, challenge.ChallengeParameters.USER_ID_FOR_SRP)
+          (await calculateSecretHash(
+            this.clientSecret,
+            this.userPoolClientId,
+            challenge.ChallengeParameters.USER_ID_FOR_SRP
+          ))
       },
       ClientMetadata: {}
     };
@@ -610,7 +617,8 @@ export class CognitoClient {
       AuthParameters: {
         USERNAME: username,
         PASSWORD: password,
-        SECRET_HASH: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+        SECRET_HASH:
+          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
       },
       ClientMetadata: {}
     };
@@ -640,7 +648,9 @@ export class CognitoClient {
       AuthParameters: {
         REFRESH_TOKEN: refreshToken,
         SECRET_HASH:
-          this.clientSecret && username && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+          this.clientSecret &&
+          username &&
+          (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
       },
       ClientMetadata: {}
     };
@@ -671,7 +681,7 @@ export class CognitoClient {
       Username: username,
       Password: password,
       UserAttributes: userAttributes,
-      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+      SecretHash: this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
     };
 
     const data = await cognitoRequest(signUpRequest, ServiceTarget.SignUp, this.cognitoEndpoint);
@@ -695,7 +705,7 @@ export class CognitoClient {
       ClientId: this.userPoolClientId,
       ConfirmationCode: code,
       Username: username,
-      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+      SecretHash: this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
     };
 
     await cognitoRequest(confirmSignUpRequest, ServiceTarget.ConfirmSignUp, this.cognitoEndpoint);
@@ -781,7 +791,7 @@ export class CognitoClient {
     const forgotPasswordRequest: ForgotPasswordRequest = {
       ClientId: this.userPoolClientId,
       Username: username,
-      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+      SecretHash: this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
     };
 
     await cognitoRequest(forgotPasswordRequest, ServiceTarget.ForgotPassword, this.cognitoEndpoint);
@@ -802,7 +812,7 @@ export class CognitoClient {
       Username: username,
       ConfirmationCode: confirmationCode,
       Password: newPassword,
-      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+      SecretHash: this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
     };
 
     await cognitoRequest(confirmForgotPasswordRequest, ServiceTarget.ConfirmForgotPassword, this.cognitoEndpoint);
@@ -818,7 +828,7 @@ export class CognitoClient {
     const resendConfirmationCodeRequest: ResendConfirmationCodeRequest = {
       ClientId: this.userPoolClientId,
       Username: username,
-      SecretHash: this.clientSecret && calculateSecretHash(this.clientSecret, this.userPoolClientId, username)
+      SecretHash: this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
     };
 
     await cognitoRequest(resendConfirmationCodeRequest, ServiceTarget.ResendConfirmationCode, this.cognitoEndpoint);
@@ -841,8 +851,7 @@ export class CognitoClient {
     const state = (await randomBytes(32)).toString('hex');
     const pkce = (await randomBytes(128)).toString('hex');
 
-    const code_challenge = Buffer.from(hashJs.sha256().update(pkce).digest())
-      .toString('base64')
+    const code_challenge = uint8ArrayToBase64String(await digest('SHA-256', uint8ArrayFromString(pkce)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');

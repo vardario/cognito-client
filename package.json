@@ -22,9 +22,7 @@
     "watch": "tsc --build --watch"
   },
   "dependencies": {
-    "buffer": "^6.0.3",
     "date-fns-tz": "^2.0.0",
-    "hash.js": "^1.1.7",
     "jsbn": "^1.1.0"
   },
   "devDependencies": {
@@ -44,6 +42,7 @@
     "prettier-package-json": "^2.8.0",
     "semantic-release": "^22.0.8",
     "testcontainers": "^10.2.2",
+    "tsx": "^4.7.1",
     "typescript": "^5.2.2",
     "vitest": "^0.34.6",
     "vitest-fetch-mock": "^0.2.2"

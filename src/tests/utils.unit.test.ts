@@ -22,14 +22,16 @@ describe('Utils Test', () => {
     expect(padHex(new BigInteger('310'))).toBe('0136');
   });
 
-  test('hashHexString', () => {
-    expect(hashHexString('ff')).toBe('a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89');
-    expect(hashHexString('0123')).toBe('b71de80778f2783383f5d5a3028af84eab2f18a4eb38968172ca41724dd4b3f4');
+  test('hashHexString', async () => {
+    expect(await hashHexString('ff')).toBe('a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89');
+    expect(await hashHexString('0123')).toBe('b71de80778f2783383f5d5a3028af84eab2f18a4eb38968172ca41724dd4b3f4');
   });
 
-  test('hashBuffer', () => {
-    expect(hashBuffer(Buffer.from([0xff]))).toBe('a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89');
-    expect(hashBuffer(Buffer.from([0x01, 0x23]))).toBe(
+  test('hashBuffer', async () => {
+    expect(await hashBuffer(Buffer.from([0xff]))).toBe(
+      'a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89'
+    );
+    expect(await hashBuffer(Buffer.from([0x01, 0x23]))).toBe(
       'b71de80778f2783383f5d5a3028af84eab2f18a4eb38968172ca41724dd4b3f4'
     );
   });
@@ -39,8 +41,8 @@ describe('Utils Test', () => {
     expect(smallA.toString()).toBe('1267650600228229401496703205376');
   });
 
-  test('calculateU', () => {
-    const u = calculateU(new BigInteger('100'), new BigInteger('100'));
+  test('calculateU', async () => {
+    const u = await calculateU(new BigInteger('100'), new BigInteger('100'));
     expect(u.toString()).toBe('70332525207219800455006367509018178659670313831872967035717895932648085979283');
   });
 
@@ -51,13 +53,13 @@ describe('Utils Test', () => {
     );
   });
 
-  test('calculateHKDF', () => {
-    const hkdf = calculateHKDF(Buffer.from([0xff]), Buffer.from([0x0f]));
-    expect(hkdf).toStrictEqual([7, 216, 173, 67, 93, 105, 60, 42, 9, 224, 149, 241, 59, 180, 156, 79]);
+  test('calculateHKDF', async () => {
+    const hkdf = await calculateHKDF(new Uint8Array([0xff]), new Uint8Array([0x0f]));
+    expect(hkdf).toStrictEqual(new Uint8Array([7, 216, 173, 67, 93, 105, 60, 42, 9, 224, 149, 241, 59, 180, 156, 79]));
   });
 
-  test('getPasswordAuthenticationKey', () => {
-    const key = getPasswordAuthenticationKey(
+  test('getPasswordAuthenticationKey', async () => {
+    const key = await getPasswordAuthenticationKey(
       'userPoolName',
       'user',
       'password',
@@ -67,12 +69,14 @@ describe('Utils Test', () => {
       new BigInteger('4')
     );
 
-    expect(key).toStrictEqual([86, 45, 9, 114, 105, 206, 19, 253, 169, 180, 204, 213, 65, 178, 79, 134]);
+    expect(key).toStrictEqual(
+      new Uint8Array([86, 45, 9, 114, 105, 206, 19, 253, 169, 180, 204, 213, 65, 178, 79, 134])
+    );
   });
 
-  test('calculateSignature', () => {
-    const hkdf = calculateHKDF(Buffer.from([0xff]), Buffer.from([0x0f]));
-    const { signature, timeStamp } = calculateSignature(
+  test('calculateSignature', async () => {
+    const hkdf = await calculateHKDF(new Uint8Array([0xff]), new Uint8Array([0x0f]));
+    const { signature, timeStamp } = await calculateSignature(
       'userPoolName',
       '434a1100-258c-488c-a9a9-b00ef4be2713',
       'secret',
@@ -88,8 +92,8 @@ describe('Utils Test', () => {
     expect(formatTimestamp(new Date(Date.UTC(2023)))).toBe('Sun Jan 1 00:00:00 UTC 2023');
   });
 
-  test('calculateSecretHash', () => {
-    const hash = calculateSecretHash('clientSecret', 'clientId', 'username');
+  test('calculateSecretHash', async () => {
+    const hash = await calculateSecretHash('clientSecret', 'clientId', 'username');
     expect(hash).toBe('vH5prJR/bHEh4xqtNXGUBICLyh4AkiNCkefVf8h3VHs=');
   });
 });

@@ -1,7 +1,31 @@
-import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
-import { Buffer } from 'buffer';
 import formatInTimeZone from 'date-fns-tz/formatInTimeZone';
+
+export function uint8ArrayFromHexString(hexString: string) {
+  return Uint8Array.from(hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+}
+
+export function uint8ArrayFromString(str: string) {
+  const textEncoder = new TextEncoder();
+  return textEncoder.encode(str);
+}
+
+export function uint8ArrayFromBase64String(str: string) {
+  const binaryString = atob(str);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export function uint8ArrayToHexString(bytes: Uint8Array) {
+  return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
+}
+
+export function uint8ArrayToBase64String(bytes: Uint8Array) {
+  return btoa(String.fromCharCode(...bytes));
+}
 
 const initN =
   'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1' +
@@ -23,7 +47,7 @@ const initN =
 
 const N = new BigInteger(initN, 16);
 const g = new BigInteger('2', 16);
-const k = new BigInteger(hashHexString(`${padHex(N)}${padHex(g)}`), 16);
+const k = new BigInteger(await hashHexString(`${padHex(N)}${padHex(g)}`), 16);
 
 export function padHex(bigInt: BigInteger): string {
   const HEX_MSB_REGEX = /^[89a-f]/i;
@@ -53,13 +77,13 @@ export function padHex(bigInt: BigInteger): string {
   return hexStr;
 }
 
-export function hashHexString(str: string) {
-  return hashBuffer(Buffer.from(str, 'hex'));
+export async function hashHexString(str: string) {
+  return hashBuffer(uint8ArrayFromHexString(str));
 }
 
-export function hashBuffer(buffer: Buffer) {
-  const hash = hashJs.sha256().update(buffer).digest('hex');
-  return new Array(64 - hash.length).join('0') + hash;
+export async function hashBuffer(buffer: Uint8Array) {
+  const hashArray = await digest('SHA-256', buffer);
+  return uint8ArrayToHexString(hashArray);
 }
 
 export async function generateSmallA() {
@@ -71,8 +95,8 @@ export function generateA(smallA: BigInteger) {
   return A;
 }
 
-export function calculateU(A: BigInteger, B: BigInteger) {
-  return new BigInteger(hashHexString(padHex(A) + padHex(B)), 16);
+export async function calculateU(A: BigInteger, B: BigInteger) {
+  return new BigInteger(await hashHexString(padHex(A) + padHex(B)), 16);
 }
 
 export function calculateS(X: BigInteger, B: BigInteger, U: BigInteger, smallA: BigInteger) {
@@ -81,25 +105,19 @@ export function calculateS(X: BigInteger, B: BigInteger, U: BigInteger, smallA: 
   return bMinusKMult.modPow(smallA.add(U.multiply(X)), N).mod(N);
 }
 
-export function calculateHKDF(ikm: Buffer, salt: Buffer) {
-  const infoBitsBuffer = Buffer.concat([
-    Buffer.from('Caldera Derived Key', 'utf8'),
-    Buffer.from(String.fromCharCode(1), 'utf8')
+export async function calculateHKDF(ikm: Uint8Array, salt: Uint8Array) {
+  const infoBitsBuffer = new Uint8Array([
+    ...uint8ArrayFromString('Caldera Derived Key'),
+    ...uint8ArrayFromString(String.fromCharCode(1))
   ]);
 
-  const prk = hashJs
-    .hmac(hashJs.sha256 as any, salt)
-    .update(ikm)
-    .digest();
-  const hmacResult = hashJs
-    .hmac(hashJs.sha256 as any, prk)
-    .update(infoBitsBuffer)
-    .digest();
+  const prk = await hmac('SHA-256', salt, ikm);
+  const hmacResult = await hmac('SHA-256', prk, infoBitsBuffer);
 
   return hmacResult.slice(0, 16);
 }
 
-export function getPasswordAuthenticationKey(
+export async function getPasswordAuthenticationKey(
   poolName: string,
   username: string,
   password: string,
@@ -109,35 +127,30 @@ export function getPasswordAuthenticationKey(
   salt: BigInteger
 ) {
   const usernamePassword = `${poolName}${username}:${password}`;
-  const usernamePasswordHash = hashBuffer(Buffer.from(usernamePassword, 'utf-8'));
-  const X = new BigInteger(hashHexString(padHex(salt) + usernamePasswordHash), 16);
+  const usernamePasswordHash = await hashBuffer(uint8ArrayFromString(usernamePassword));
+  const X = new BigInteger(await hashHexString(padHex(salt) + usernamePasswordHash), 16);
   const S = calculateS(X, B, U, smallA);
 
-  return calculateHKDF(Buffer.from(padHex(S), 'hex'), Buffer.from(padHex(U), 'hex'));
+  return calculateHKDF(uint8ArrayFromHexString(padHex(S)), uint8ArrayFromHexString(padHex(U)));
 }
 
-export function calculateSignature(
+export async function calculateSignature(
   poolName: string,
   userId: string,
   secretBlock: string,
-  hkdf: number[],
+  hkdf: Uint8Array,
   date = new Date()
 ) {
   const timeStamp = formatTimestamp(date);
 
-  const concatBuffer = Buffer.concat([
-    Buffer.from(poolName, 'utf8'),
-    Buffer.from(userId, 'utf8'),
-    Buffer.from(secretBlock, 'base64'),
-    Buffer.from(timeStamp, 'utf8')
+  const concatBuffer = new Uint8Array([
+    ...uint8ArrayFromString(poolName),
+    ...uint8ArrayFromString(userId),
+    ...uint8ArrayFromBase64String(secretBlock),
+    ...uint8ArrayFromString(timeStamp)
   ]);
 
-  const signature = Buffer.from(
-    hashJs
-      .hmac(hashJs.sha256 as any, hkdf)
-      .update(concatBuffer)
-      .digest()
-  ).toString('base64');
+  const signature = uint8ArrayToBase64String(await hmac('SHA-256', hkdf, concatBuffer));
 
   return {
     signature,
@@ -162,31 +175,24 @@ export function formatTimestamp(date: Date) {
   return formatInTimeZone(date, 'UTC', "EEE MMM d HH:mm:ss 'UTC' yyyy");
 }
 
-export function calculateSecretHash(clientSecret: string, userPoolClientId: string, username: string) {
+export async function calculateSecretHash(clientSecret: string, userPoolClientId: string, username: string) {
   const message = `${username}${userPoolClientId}`;
-  const hash = Buffer.from(
-    hashJs
-      .hmac(hashJs.sha256 as any, clientSecret)
-      .update(message)
-      .digest()
-  ).toString('base64');
+  const hash = uint8ArrayToBase64String(
+    await hmac('SHA-256', uint8ArrayFromString(clientSecret), uint8ArrayFromString(message))
+  );
 
   return hash;
 }
 
-export async function digest(algorithm: AlgorithmIdentifier, str: string) {
-  const buffer = new TextEncoder().encode(str);
-  const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+export async function digest(algorithm: AlgorithmIdentifier, data: Uint8Array) {
+  const hashBuffer = await crypto.subtle.digest(algorithm, data);
+  return new Uint8Array(hashBuffer);
 }
 
-export async function hmac(algorithm: AlgorithmIdentifier, key: string, data: string) {
-  const enc = new TextEncoder();
+export async function hmac(algorithm: AlgorithmIdentifier, key: Uint8Array, data: Uint8Array) {
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    enc.encode(key),
+    key,
     {
       name: 'HMAC',
       hash: algorithm
@@ -194,6 +200,6 @@ export async function hmac(algorithm: AlgorithmIdentifier, key: string, data: st
     false,
     ['sign']
   );
-  const signature = await crypto.subtle.sign(algorithm, cryptoKey, enc.encode(data));
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
   return new Uint8Array(signature);
 }
