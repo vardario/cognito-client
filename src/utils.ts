@@ -2,7 +2,6 @@ import hashJs from 'hash.js';
 import { BigInteger } from 'jsbn';
 import { Buffer } from 'buffer';
 import formatInTimeZone from 'date-fns-tz/formatInTimeZone';
-import { random } from '@lukeed/csprng';
 
 const initN =
   'FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1' +
@@ -156,7 +155,7 @@ export function decodeJwt<T = unknown>(jwt: string) {
 }
 
 export async function randomBytes(num: number) {
-  return random(num);
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(num)));
 }
 
 export function formatTimestamp(date: Date) {
@@ -173,4 +172,28 @@ export function calculateSecretHash(clientSecret: string, userPoolClientId: stri
   ).toString('base64');
 
   return hash;
+}
+
+export async function digest(algorithm: AlgorithmIdentifier, str: string) {
+  const buffer = new TextEncoder().encode(str);
+  const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function hmac(algorithm: AlgorithmIdentifier, key: string, data: string) {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(key),
+    {
+      name: 'HMAC',
+      hash: algorithm
+    },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(algorithm, cryptoKey, enc.encode(data));
+  return new Uint8Array(signature);
 }
