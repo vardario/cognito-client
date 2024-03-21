@@ -18,7 +18,8 @@ module.exports = {
     '*.ttf',
     '*.postcss',
     '*.html',
-    '*.md'
+    '*.md',
+    'LICENSE'
   ],
   overrides: [],
   parserOptions: {
