@@ -1,5 +1,3 @@
-import { BigInteger } from 'jsbn';
-
 import {
   ChangePasswordException,
   ChangePasswordError,
@@ -552,8 +550,8 @@ export class CognitoClient {
       this.cognitoEndpoint
     )) as ChallengeResponse;
 
-    const B = new BigInteger(challenge.ChallengeParameters.SRP_B, 16);
-    const salt = new BigInteger(challenge.ChallengeParameters.SALT, 16);
+    const B = BigInt('0x' + challenge.ChallengeParameters.SRP_B);
+    const salt = BigInt('0x' + challenge.ChallengeParameters.SALT);
     const U = await calculateU(A, B);
 
     const hkdf = await getPasswordAuthenticationKey(

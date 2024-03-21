@@ -10,26 +10,26 @@
   },
   "type": "module",
   "main": "lib/index.js",
+  "browser": "lib/browser.js",
   "files": [
     "lib"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "pnpm build:lib && pnpm build:browser",
+    "build:browser": "esbuild src/index.ts --bundle --outfile=lib/browser.js --platform=neutral --external:zod",
+    "build:lib": "tsc --build",
     "format": "prettier --plugin-search-dir . --write . && prettier-package-json --write && eslint --fix .",
     "integration-test": "vitest run integration",
     "prepare": "husky install",
     "test": "vitest run unit",
     "watch": "tsc --build --watch"
   },
-  "dependencies": {
-    "jsbn": "^1.1.0"
-  },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.465.0",
-    "@types/jsbn": "^1.2.33",
     "@types/jsdom": "^21.1.5",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
+    "esbuild": "^0.20.2",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-unused-imports": "^3.0.0",
