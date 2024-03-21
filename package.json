@@ -22,7 +22,6 @@
     "watch": "tsc --build --watch"
   },
   "dependencies": {
-    "date-fns-tz": "^2.0.0",
     "jsbn": "^1.1.0"
   },
   "devDependencies": {

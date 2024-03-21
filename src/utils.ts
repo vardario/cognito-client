@@ -1,5 +1,7 @@
 import { BigInteger } from 'jsbn';
-import formatInTimeZone from 'date-fns-tz/formatInTimeZone';
+
+const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function uint8ArrayFromHexString(hexString: string) {
   return Uint8Array.from(hexString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
@@ -172,7 +174,13 @@ export async function randomBytes(num: number) {
 }
 
 export function formatTimestamp(date: Date) {
-  return formatInTimeZone(date, 'UTC', "EEE MMM d HH:mm:ss 'UTC' yyyy");
+  return `${WEEK_DAYS[date.getUTCDay()]} ${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()} ${date
+    .getUTCHours()
+    .toString()
+    .padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:${date
+    .getUTCSeconds()
+    .toString()
+    .padStart(2, '0')} UTC ${date.getUTCFullYear()}`;
 }
 
 export async function calculateSecretHash(clientSecret: string, userPoolClientId: string, username: string) {

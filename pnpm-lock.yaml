@@ -7,9 +7,6 @@ settings:
 importers:
   .:
     dependencies:
-      date-fns-tz:
-        specifier: ^2.0.0
-        version: 2.0.0(date-fns@2.30.0)
       jsbn:
         specifier: ^1.1.0
         version: 1.1.0
@@ -959,14 +956,6 @@ packages:
       '@babel/core': 7.23.5
       '@babel/helper-plugin-utils': 7.22.5
     dev: true
-
-  /@babel/runtime@7.23.2:
-    resolution:
-      { integrity: sha512-mM8eg4yl5D6i3lu2QKPuPH4FArvJ8KhTofbE7jwMUv9KX5mBvwPAqnV3MlyBNqdp9RyRKP6Yck8TrfYrPvX3bg== }
-    engines: { node: '>=6.9.0' }
-    dependencies:
-      regenerator-runtime: 0.14.0
-    dev: false
 
   /@babel/template@7.22.15:
     resolution:
@@ -3939,23 +3928,6 @@ packages:
       whatwg-url: 12.0.1
     dev: true
 
-  /date-fns-tz@2.0.0(date-fns@2.30.0):
-    resolution:
-      { integrity: sha512-OAtcLdB9vxSXTWHdT8b398ARImVwQMyjfYGkKD2zaGpHseG2UPHbHjXELReErZFxWdSLph3c2zOaaTyHfOhERQ== }
-    peerDependencies:
-      date-fns: '>=2.0.0'
-    dependencies:
-      date-fns: 2.30.0
-    dev: false
-
-  /date-fns@2.30.0:
-    resolution:
-      { integrity: sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw== }
-    engines: { node: '>=0.11' }
-    dependencies:
-      '@babel/runtime': 7.23.2
-    dev: false
-
   /debug@4.3.4:
     resolution:
       { integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ== }
@@ -6888,11 +6860,6 @@ packages:
     dependencies:
       esprima: 4.0.1
     dev: true
-
-  /regenerator-runtime@0.14.0:
-    resolution:
-      { integrity: sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA== }
-    dev: false
 
   /registry-auth-token@5.0.2:
     resolution:
