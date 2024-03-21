@@ -49,7 +49,7 @@ const N = BigInt(
 );
 
 const g = BigInt('0x2');
-const k = BigInt('0x' + (await hashHexString(`${padHex(N)}${padHex(g)}`)));
+const k = BigInt('0x538282c4354742d7cbbde2359fcf67f9f5b3a6b08791e5011b43b8a5b66d9ee6');
 
 export function padHex(bigInt: bigint): string {
   const HEX_MSB_REGEX = /^[89a-f]/i;
