@@ -12,13 +12,12 @@ import {
   hashHexString,
   padHex
 } from '../utils';
-import { BigInteger } from 'jsbn';
 
 describe('Utils Test', () => {
   test('padHex', () => {
-    expect(padHex(new BigInteger('15'))).toBe('0f');
-    expect(padHex(new BigInteger('4095'))).toBe('0fff');
-    expect(padHex(new BigInteger('310'))).toBe('0136');
+    expect(padHex(BigInt('15'))).toBe('0f');
+    expect(padHex(BigInt('4095'))).toBe('0fff');
+    expect(padHex(BigInt('310'))).toBe('0136');
   });
 
   test('hashHexString', async () => {
@@ -36,17 +35,17 @@ describe('Utils Test', () => {
   });
 
   test('generateA', () => {
-    const smallA = generateA(new BigInteger('100'));
+    const smallA = generateA(BigInt('100'));
     expect(smallA.toString()).toBe('1267650600228229401496703205376');
   });
 
   test('calculateU', async () => {
-    const u = await calculateU(new BigInteger('100'), new BigInteger('100'));
+    const u = await calculateU(BigInt('100'), BigInt('100'));
     expect(u.toString()).toBe('70332525207219800455006367509018178659670313831872967035717895932648085979283');
   });
 
   test('calculateS', () => {
-    const s = calculateS(new BigInteger('1'), new BigInteger('2'), new BigInteger('3'), new BigInteger('4'));
+    const s = calculateS(BigInt('0x1'), BigInt('0x2'), BigInt('0x3'), BigInt('0x4'));
     expect(s.toString()).toBe(
       '5809605995369958062791915965639201402176612226902900533702900882779736177890990861472094774477339581147373410185646378328043729800750470098210924487866935059164371588168047540943981644516632755067501626434556398193186628990071248660819361205119793693985433297036118232914410171876807536457391277857011849897410207519105333355801121109356897459426271845471397952675959440793493071628394108737997185958750117096328186113285098758916641740918046753154406248552338830082056866591606088156608060604806971832549807299296123083069198694203128583316840534100262020920889026655577536636750554173250262994749697781980080849048403117385617721960451075788245889547715737308326318533063595451531962857067337193523476927933149520515933129751886387804976202728442059217742807994802054816532741174549772492321716914349968002961476349298833293205498460336244805117689992229628920310354519723549636852605179355221038194957586812051333018343807'
     );
@@ -62,10 +61,10 @@ describe('Utils Test', () => {
       'userPoolName',
       'user',
       'password',
-      new BigInteger('1'),
-      new BigInteger('2'),
-      new BigInteger('3'),
-      new BigInteger('4')
+      BigInt('0x1'),
+      BigInt('0x2'),
+      BigInt('0x3'),
+      BigInt('0x4')
     );
 
     expect(key).toStrictEqual(
