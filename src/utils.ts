@@ -89,7 +89,7 @@ export async function hashBuffer(buffer: Uint8Array) {
 }
 
 export async function generateSmallA() {
-  return BigInt((await randomBytes(128)).toString('hex'));
+  return BigInt('0x' + (await randomBytes(128)).toString('hex'));
 }
 
 export function generateA(smallA: bigint) {
