@@ -883,17 +883,20 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async handleCodeFlow(returnUrl: string, pkce: string): Promise<Session> {
+  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<Session> {
     if (this.oAuth === undefined) {
       throw Error('You have to define oAuth options to use handleCodeFlow');
     }
 
     const url = new URL(returnUrl);
     const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
 
-    if (code === null || state === null) {
+    if (code === null) {
       throw Error('code or state parameter is missing from return url.');
+    }
+
+    if (url.searchParams.get('state') !== state) {
+      throw Error('State parameter does not match.');
     }
 
     const urlParams = new URLSearchParams();
