@@ -892,7 +892,7 @@ export class CognitoClient {
     const code = url.searchParams.get('code');
 
     if (code === null) {
-      throw Error('code or state parameter is missing from return url.');
+      throw Error('code parameter is missing from return url.');
     }
 
     if (url.searchParams.get('state') !== state) {
