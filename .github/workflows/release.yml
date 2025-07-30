@@ -10,17 +10,7 @@ jobs:
       id-token: write
       pull-requests: write
     steps:
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
+      - uses: ./.github/actions/project-init
       - run: pnpm build
       - run: pnpm test
       - uses: aws-actions/configure-aws-credentials@v4
