@@ -48,14 +48,13 @@ export interface CognitoBaseRequest {
   AnalyticsMetadata?: {
     AnalyticsEndpointId: string;
   };
-
   UserContextData?: {
     EncodedData?: string;
     IpAddress?: string;
   };
 }
 
-export interface AuthIntiUserSrpRequest extends CognitoBaseRequest {
+export interface InitiateAuthUserSrpAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_SRP_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -64,7 +63,7 @@ export interface AuthIntiUserSrpRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiUserPasswordRequest extends CognitoBaseRequest {
+export interface InitiateAuthUserPasswordAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_PASSWORD_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -73,7 +72,7 @@ export interface AuthIntiUserPasswordRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiRefreshTokenRequest extends CognitoBaseRequest {
+export interface InitiateAuthRefreshTokenAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'REFRESH_TOKEN_AUTH';
   AuthParameters: {
     REFRESH_TOKEN: string;
@@ -81,7 +80,7 @@ export interface AuthIntiRefreshTokenRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiCustomAuthRequest extends CognitoBaseRequest {
+export interface InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'CUSTOM_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -89,11 +88,11 @@ export interface AuthIntiCustomAuthRequest extends CognitoBaseRequest {
   };
 }
 
-export type AuthIntiRequest =
-  | AuthIntiUserSrpRequest
-  | AuthIntiRefreshTokenRequest
-  | AuthIntiCustomAuthRequest
-  | AuthIntiUserPasswordRequest;
+export type InitiateAuthRequest =
+  | InitiateAuthUserSrpAuthRequest
+  | InitiateAuthRefreshTokenAuthRequest
+  | InitiateAuthCustomAuthRequest
+  | InitiateAuthUserPasswordAuthRequest;
 
 export interface RespondToAuthChallengeBaseRequest extends CognitoBaseRequest {
   Session?: string;
@@ -410,7 +409,7 @@ export interface InitiateAuthAuthenticationResponse {
   session?: never;
 }
 
-export interface InitiateAuthPasswordChallengeResponse {
+export interface InitiateAuthPasswordVerifierChallengeResponse {
   AuthenticationResult?: never;
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeParameters: {
@@ -423,11 +422,20 @@ export interface InitiateAuthPasswordChallengeResponse {
   session?: never;
 }
 
-export type InitiateAuthChallengeResponse = InitiateAuthPasswordChallengeResponse;
+export interface InitiateEmailOtpChallengeResponse {
+  ChallengeName: 'EMAIL_OTP';
+  ChallengeParameters: {
+    CODE_DELIVERY_DELIVERY_MEDIUM: string;
+    CODE_DELIVERY_DESTINATION: string;
+  };
+  session: string;
+}
+
+export type InitiateAuthChallengeResponse = InitiateAuthPasswordVerifierChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
-  | InitiateAuthPasswordChallengeResponse
+  | InitiateAuthPasswordVerifierChallengeResponse
   | InitiateAuthChallengeResponse;
 
 export function authResultToSession(authenticationResult: AuthenticationResultType): Session {
@@ -455,7 +463,7 @@ type CognitoResponseMap = {
 };
 
 type CognitoRequestMap = {
-  [ServiceTarget.InitiateAuth]: AuthIntiRequest;
+  [ServiceTarget.InitiateAuth]: InitiateAuthRequest;
   [ServiceTarget.RespondToAuthChallenge]: RespondToAuthChallengeRequest;
   [ServiceTarget.SignUp]: SignUpRequest;
   [ServiceTarget.ConfirmSignUp]: ConfirmSignUpRequest;
@@ -685,7 +693,7 @@ export class CognitoClient {
    * @throws {InitAuthError}
    */
   async authenticateUser(username: string, password: string): Promise<Session> {
-    const initiateAuthPayload: AuthIntiRequest = {
+    const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
@@ -723,7 +731,7 @@ export class CognitoClient {
    * @throws {InitAuthError}
    */
   public async refreshSession(refreshToken: string, username?: string): Promise<Session> {
-    const refreshTokenPayload: AuthIntiRequest = {
+    const refreshTokenPayload: InitiateAuthRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
