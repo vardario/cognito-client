@@ -385,18 +385,33 @@ export enum IdentityProvider {
   Apple = 'SignInWithApple'
 }
 
-export interface AuthenticationResult {
+export interface AuthenticationResultType {
   AccessToken: string;
   ExpiresIn: number;
   IdToken: string;
   RefreshToken: string;
+  NewDeviceMetadata?: NewDeviceMetadata;
 }
 
-export interface AuthenticationResponse {
-  AuthenticationResult: AuthenticationResult;
+export interface NewDeviceMetadata {
+  DeviceKey?: string;
+  DeviceGroupKey?: string;
 }
 
-export interface ChallengeResponse {
+export interface RespondToAuthChallengeResponse {
+  AuthenticationResult: AuthenticationResultType;
+  TokenType?: string;
+  session?: never;
+}
+
+export interface InitiateAuthAuthenticationResponse {
+  AuthenticationResult: AuthenticationResultType;
+  ChallengeName?: never;
+  session?: never;
+}
+
+export interface InitiateAuthPasswordChallengeResponse {
+  AuthenticationResult?: never;
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeParameters: {
     SALT: string;
@@ -405,9 +420,17 @@ export interface ChallengeResponse {
     USERNAME: string;
     USER_ID_FOR_SRP: string;
   };
+  session?: never;
 }
 
-export function authResultToSession(authenticationResult: AuthenticationResult): Session {
+export type InitiateAuthChallengeResponse = InitiateAuthPasswordChallengeResponse;
+
+export type InitiateAuthResponse =
+  | InitiateAuthAuthenticationResponse
+  | InitiateAuthPasswordChallengeResponse
+  | InitiateAuthChallengeResponse;
+
+export function authResultToSession(authenticationResult: AuthenticationResultType): Session {
   return {
     accessToken: authenticationResult.AccessToken,
     idToken: authenticationResult.IdToken,
@@ -415,6 +438,59 @@ export function authResultToSession(authenticationResult: AuthenticationResult):
     refreshToken: authenticationResult.RefreshToken
   };
 }
+
+type CognitoResponseMap = {
+  [ServiceTarget.InitiateAuth]: InitiateAuthResponse;
+  [ServiceTarget.RespondToAuthChallenge]: RespondToAuthChallengeResponse;
+  [ServiceTarget.SignUp]: { UserConfirmed: boolean; UserSub: string };
+  [ServiceTarget.ConfirmSignUp]: void;
+  [ServiceTarget.ChangePassword]: void;
+  [ServiceTarget.RevokeToken]: void;
+  [ServiceTarget.ForgotPassword]: void;
+  [ServiceTarget.ConfirmForgotPassword]: void;
+  [ServiceTarget.ResendConfirmationCode]: void;
+  [ServiceTarget.UpdateUserAttributes]: void;
+  [ServiceTarget.VerifyUserAttribute]: void;
+  [ServiceTarget.GlobalSignOut]: void;
+};
+
+type CognitoRequestMap = {
+  [ServiceTarget.InitiateAuth]: AuthIntiRequest;
+  [ServiceTarget.RespondToAuthChallenge]: RespondToAuthChallengeRequest;
+  [ServiceTarget.SignUp]: SignUpRequest;
+  [ServiceTarget.ConfirmSignUp]: ConfirmSignUpRequest;
+  [ServiceTarget.ChangePassword]: {
+    PreviousPassword: string;
+    ProposedPassword: string;
+    AccessToken: string;
+  };
+  [ServiceTarget.RevokeToken]: {
+    Token: string;
+    ClientId: string;
+    ClientSecret?: string;
+  };
+  [ServiceTarget.ForgotPassword]: ForgotPasswordRequest;
+  [ServiceTarget.ConfirmForgotPassword]: ConfirmForgotPasswordRequest;
+  [ServiceTarget.ResendConfirmationCode]: ResendConfirmationCodeRequest;
+  [ServiceTarget.UpdateUserAttributes]: {
+    UserAttributes: UserAttribute[];
+    AccessToken: string;
+  };
+  [ServiceTarget.VerifyUserAttribute]: {
+    AttributeName: string;
+    Code: string;
+    AccessToken: string;
+  };
+  [ServiceTarget.GlobalSignOut]: {
+    AccessToken: string;
+  };
+};
+
+export async function cognitoRequest<T extends ServiceTarget>(
+  body: CognitoRequestMap[T],
+  serviceTarget: T,
+  cognitoEndpoint: string
+): Promise<CognitoResponseMap[T]>;
 
 export async function cognitoRequest(body: object, serviceTarget: ServiceTarget, cognitoEndpoint: string) {
   const cognitoResponse = await fetch(cognitoEndpoint, {
@@ -532,31 +608,33 @@ export class CognitoClient {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
-    const initiateAuthPayload: AuthIntiRequest = {
-      AuthFlow: 'USER_SRP_AUTH',
-      ClientId: this.userPoolClientId,
-      AuthParameters: {
-        USERNAME: username,
-        SRP_A: A.toString(16),
-        SECRET_HASH:
-          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+    const initAuthResponse = await cognitoRequest(
+      {
+        AuthFlow: 'USER_SRP_AUTH',
+        ClientId: this.userPoolClientId,
+        AuthParameters: {
+          USERNAME: username,
+          SRP_A: A.toString(16),
+          SECRET_HASH:
+            this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+        },
+        ClientMetadata: {}
       },
-      ClientMetadata: {}
-    };
-
-    const challenge = (await cognitoRequest(
-      initiateAuthPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as ChallengeResponse;
+    );
 
-    const B = BigInt('0x' + challenge.ChallengeParameters.SRP_B);
-    const salt = BigInt('0x' + challenge.ChallengeParameters.SALT);
+    if (initAuthResponse.ChallengeName !== 'PASSWORD_VERIFIER') {
+      throw new Error('Unexpected challenge name');
+    }
+
+    const B = BigInt('0x' + initAuthResponse.ChallengeParameters.SRP_B);
+    const salt = BigInt('0x' + initAuthResponse.ChallengeParameters.SALT);
     const U = await calculateU(A, B);
 
     const hkdf = await getPasswordAuthenticationKey(
       this.cognitoPoolName,
-      challenge.ChallengeParameters.USER_ID_FOR_SRP,
+      initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
       password,
       B,
       U,
@@ -566,8 +644,8 @@ export class CognitoClient {
 
     const { signature, timeStamp } = await calculateSignature(
       this.cognitoPoolName,
-      challenge.ChallengeParameters.USER_ID_FOR_SRP,
-      challenge.ChallengeParameters.SECRET_BLOCK,
+      initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+      initAuthResponse.ChallengeParameters.SECRET_BLOCK,
       hkdf
     );
 
@@ -575,16 +653,16 @@ export class CognitoClient {
       ChallengeName: 'PASSWORD_VERIFIER',
       ClientId: this.userPoolClientId,
       ChallengeResponses: {
-        PASSWORD_CLAIM_SECRET_BLOCK: challenge.ChallengeParameters.SECRET_BLOCK,
+        PASSWORD_CLAIM_SECRET_BLOCK: initAuthResponse.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
-        USERNAME: challenge.ChallengeParameters.USER_ID_FOR_SRP,
+        USERNAME: initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
         TIMESTAMP: timeStamp,
         SECRET_HASH:
           this.clientSecret &&
           (await calculateSecretHash(
             this.clientSecret,
             this.userPoolClientId,
-            challenge.ChallengeParameters.USER_ID_FOR_SRP
+            initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
           ))
       },
       ClientMetadata: {}
@@ -621,11 +699,18 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await cognitoRequest(
+    const { AuthenticationResult } = await cognitoRequest(
       initiateAuthPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as AuthenticationResponse;
+    );
+
+    if (!AuthenticationResult) {
+      throw new InitAuthError(
+        'Authentication failed, no authentication result returned',
+        InitiateAuthException.InternalErrorException
+      );
+    }
 
     const session = authResultToSession(AuthenticationResult);
     return session;
@@ -657,7 +742,7 @@ export class CognitoClient {
       refreshTokenPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as AuthenticationResponse;
+    )) as RespondToAuthChallengeResponse;
 
     if (!AuthenticationResult.RefreshToken) {
       AuthenticationResult.RefreshToken = refreshToken;
