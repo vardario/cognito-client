@@ -649,27 +649,25 @@ export class CognitoClient {
       hkdf
     );
 
-    const respondToAuthChallengeRequest: RespondToAuthChallengeRequest = {
-      ChallengeName: 'PASSWORD_VERIFIER',
-      ClientId: this.userPoolClientId,
-      ChallengeResponses: {
-        PASSWORD_CLAIM_SECRET_BLOCK: initAuthResponse.ChallengeParameters.SECRET_BLOCK,
-        PASSWORD_CLAIM_SIGNATURE: signature,
-        USERNAME: initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
-        TIMESTAMP: timeStamp,
-        SECRET_HASH:
-          this.clientSecret &&
-          (await calculateSecretHash(
-            this.clientSecret,
-            this.userPoolClientId,
-            initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
-          ))
-      },
-      ClientMetadata: {}
-    };
-
     const { AuthenticationResult } = await cognitoRequest(
-      respondToAuthChallengeRequest,
+      {
+        ChallengeName: 'PASSWORD_VERIFIER',
+        ClientId: this.userPoolClientId,
+        ChallengeResponses: {
+          PASSWORD_CLAIM_SECRET_BLOCK: initAuthResponse.ChallengeParameters.SECRET_BLOCK,
+          PASSWORD_CLAIM_SIGNATURE: signature,
+          USERNAME: initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+          TIMESTAMP: timeStamp,
+          SECRET_HASH:
+            this.clientSecret &&
+            (await calculateSecretHash(
+              this.clientSecret,
+              this.userPoolClientId,
+              initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
+            ))
+        },
+        ClientMetadata: {}
+      },
       ServiceTarget.RespondToAuthChallenge,
       this.cognitoEndpoint
     );
@@ -738,11 +736,18 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await cognitoRequest(
+    const { AuthenticationResult } = await cognitoRequest(
       refreshTokenPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as RespondToAuthChallengeResponse;
+    );
+
+    if (!AuthenticationResult) {
+      throw new InitAuthError(
+        'Authentication failed, no authentication result returned',
+        InitiateAuthException.InternalErrorException
+      );
+    }
 
     if (!AuthenticationResult.RefreshToken) {
       AuthenticationResult.RefreshToken = refreshToken;
