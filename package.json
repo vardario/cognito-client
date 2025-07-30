@@ -33,7 +33,7 @@
     "esbuild": "^0.20.2",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-unused-imports": "^3.0.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "husky": "^8.0.3",
     "isomorphic-fetch": "^3.0.0",
     "jsdom": "^22.1.0",
