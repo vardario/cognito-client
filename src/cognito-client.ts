@@ -289,31 +289,6 @@ export interface CognitoClientProps {
 }
 
 /**
- * Cognito User Session
- */
-export interface Session {
-  /**
-   * JWT Access Token
-   */
-  accessToken: string;
-
-  /**
-   * JWT ID Token
-   */
-  idToken: string;
-
-  /**
-   * JWT refresh token
-   */
-  refreshToken: string;
-
-  /**
-   * Validity of the session in time stamp as milliseconds.
-   */
-  expiresIn: number;
-}
-
-/**
  * Represents the decoded values from a JWT ID token.
  */
 export interface IdToken extends Record<string, string | string[] | number | boolean> {
@@ -384,7 +359,7 @@ export enum IdentityProvider {
   Apple = 'SignInWithApple'
 }
 
-export interface AuthenticationResultType {
+export interface AuthenticationResult {
   AccessToken: string;
   ExpiresIn: number;
   IdToken: string;
@@ -398,13 +373,13 @@ export interface NewDeviceMetadata {
 }
 
 export interface RespondToAuthChallengeResponse {
-  AuthenticationResult: AuthenticationResultType;
+  AuthenticationResult: AuthenticationResult;
   TokenType?: string;
   session?: never;
 }
 
 export interface InitiateAuthAuthenticationResponse {
-  AuthenticationResult: AuthenticationResultType;
+  AuthenticationResult: AuthenticationResult;
   ChallengeName?: never;
   session?: never;
 }
@@ -437,15 +412,6 @@ export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
   | InitiateAuthPasswordVerifierChallengeResponse
   | InitiateAuthChallengeResponse;
-
-export function authResultToSession(authenticationResult: AuthenticationResultType): Session {
-  return {
-    accessToken: authenticationResult.AccessToken,
-    idToken: authenticationResult.IdToken,
-    expiresIn: new Date().getTime() + authenticationResult.ExpiresIn * 1000,
-    refreshToken: authenticationResult.RefreshToken
-  };
-}
 
 type CognitoResponseMap = {
   [ServiceTarget.InitiateAuth]: InitiateAuthResponse;
@@ -593,9 +559,9 @@ export class CognitoClient {
     this.clientSecret = clientSecret;
   }
 
-  static getDecodedTokenFromSession(session: Session): DecodedTokens {
-    const { payload: idToken } = decodeJwt<IdToken>(session.idToken);
-    const { payload: accessToken } = decodeJwt<AccessToken>(session.accessToken);
+  static getDecodedTokenFromSession(auth: AuthenticationResult): DecodedTokens {
+    const { payload: idToken } = decodeJwt<IdToken>(auth.IdToken);
+    const { payload: accessToken } = decodeJwt<AccessToken>(auth.AccessToken);
     return {
       idToken,
       accessToken
@@ -612,7 +578,7 @@ export class CognitoClient {
    *
    * @throws {InitAuthError, CognitoRespondToAuthChallengeError}
    */
-  async authenticateUserSrp(username: string, password: string): Promise<Session> {
+  async authenticateUserSrp(username: string, password: string): Promise<AuthenticationResult> {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
@@ -680,7 +646,11 @@ export class CognitoClient {
       this.cognitoEndpoint
     );
 
-    return authResultToSession(AuthenticationResult);
+    if (!AuthenticationResult) {
+      throw new Error('Authentication failed, no authentication result returned');
+    }
+
+    return AuthenticationResult;
   }
 
   /**
@@ -692,7 +662,7 @@ export class CognitoClient {
    * @param password Password
    * @throws {InitAuthError}
    */
-  async authenticateUser(username: string, password: string): Promise<Session> {
+  async authenticateUser(username: string, password: string): Promise<AuthenticationResult> {
     const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
@@ -718,8 +688,7 @@ export class CognitoClient {
       );
     }
 
-    const session = authResultToSession(AuthenticationResult);
-    return session;
+    return AuthenticationResult;
   }
 
   /**
@@ -730,7 +699,7 @@ export class CognitoClient {
    * @returns @see Session
    * @throws {InitAuthError}
    */
-  public async refreshSession(refreshToken: string, username?: string): Promise<Session> {
+  public async refreshSession(refreshToken: string, username?: string): Promise<AuthenticationResult> {
     const refreshTokenPayload: InitiateAuthRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
@@ -761,7 +730,7 @@ export class CognitoClient {
       AuthenticationResult.RefreshToken = refreshToken;
     }
 
-    return authResultToSession(AuthenticationResult);
+    return AuthenticationResult;
   }
 
   /**
@@ -981,7 +950,7 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<Session> {
+  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<AuthenticationResult> {
     if (this.oAuth === undefined) {
       throw Error('You have to define oAuth options to use handleCodeFlow');
     }
@@ -1021,14 +990,12 @@ export class CognitoClient {
       throw new Error(error);
     }
 
-    const session = authResultToSession({
+    return {
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,
       ExpiresIn: expires_in
-    });
-
-    return session;
+    };
   }
 
   /**

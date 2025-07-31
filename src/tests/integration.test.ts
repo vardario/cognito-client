@@ -88,26 +88,26 @@ async function cognitoClientTestWorkflow(client: CognitoClient) {
 
   await confirmUser(email);
 
-  let session = await client.authenticateUser(email, password);
+  let auth = await client.authenticateUser(email, password);
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  expect(auth.AccessToken).toBeDefined();
+  expect(auth.IdToken).toBeDefined();
+  expect(auth.RefreshToken).toBeDefined();
+  expect(auth.ExpiresIn).toBeDefined();
 
-  session = await client.authenticateUserSrp(email, password);
+  auth = await client.authenticateUserSrp(email, password);
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  expect(auth.AccessToken).toBeDefined();
+  expect(auth.IdToken).toBeDefined();
+  expect(auth.RefreshToken).toBeDefined();
+  expect(auth.ExpiresIn).toBeDefined();
 
-  session = await client.refreshSession(session.refreshToken, user.id);
+  auth = await client.refreshSession(auth.RefreshToken, user.id);
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  expect(auth.AccessToken).toBeDefined();
+  expect(auth.IdToken).toBeDefined();
+  expect(auth.RefreshToken).toBeDefined();
+  expect(auth.ExpiresIn).toBeDefined();
 
   await client.updateUserAttributes(
     [
@@ -116,17 +116,17 @@ async function cognitoClientTestWorkflow(client: CognitoClient) {
         Value: 'new name'
       }
     ],
-    session.accessToken
+    auth.AccessToken
   );
 
-  await client.changePassword(password, newPassword, session.accessToken);
-  session = await client.authenticateUserSrp(email, newPassword);
+  await client.changePassword(password, newPassword, auth.AccessToken);
+  auth = await client.authenticateUserSrp(email, newPassword);
 
-  await client.revokeToken(session.refreshToken);
+  await client.revokeToken(auth.RefreshToken);
   await client.forgotPassword(email);
 
-  session = await client.authenticateUserSrp(email, newPassword);
-  await client.globalSignOut(session.accessToken);
+  auth = await client.authenticateUserSrp(email, newPassword);
+  await client.globalSignOut(auth.AccessToken);
 }
 
 describe('cognito client integration test', () => {
