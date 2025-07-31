@@ -460,6 +460,14 @@ type CognitoRequestMap = {
   };
 };
 
+export function adaptExpiresIn(auth: AuthenticationResult) {
+  // Cognito returns expiresIn in seconds, but we want it in milliseconds from now
+  return {
+    ...auth,
+    ExpiresIn: new Date().getTime() + auth.ExpiresIn * 1000
+  };
+}
+
 export async function cognitoRequest<T extends ServiceTarget>(
   body: CognitoRequestMap[T],
   serviceTarget: T,
@@ -650,7 +658,7 @@ export class CognitoClient {
       throw new Error('Authentication failed, no authentication result returned');
     }
 
-    return AuthenticationResult;
+    return adaptExpiresIn(AuthenticationResult);
   }
 
   /**
@@ -688,7 +696,7 @@ export class CognitoClient {
       );
     }
 
-    return AuthenticationResult;
+    return adaptExpiresIn(AuthenticationResult);
   }
 
   /**
@@ -730,7 +738,7 @@ export class CognitoClient {
       AuthenticationResult.RefreshToken = refreshToken;
     }
 
-    return AuthenticationResult;
+    return adaptExpiresIn(AuthenticationResult);
   }
 
   /**
@@ -990,12 +998,12 @@ export class CognitoClient {
       throw new Error(error);
     }
 
-    return {
+    return adaptExpiresIn({
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,
       ExpiresIn: expires_in
-    };
+    });
   }
 
   /**
