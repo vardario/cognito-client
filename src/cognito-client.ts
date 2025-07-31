@@ -98,7 +98,7 @@ export interface RespondToAuthChallengeBaseRequest extends CognitoBaseRequest {
   Session?: string;
 }
 
-export interface RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeResponses: {
     USERNAME: string;
@@ -109,7 +109,7 @@ export interface RespondToAuthChallengePasswordVerifierRequest extends RespondTo
   };
 }
 
-export interface RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SMS_MFA';
   ChallengeResponses: {
     USERNAME: string;
@@ -118,7 +118,7 @@ export interface RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChalle
   };
 }
 
-export interface RespondToAuthChallengeCustomChallengeNameRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeCustomChallengeNameRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'CUSTOM_CHALLENGE';
   ChallengeResponses: {
     USERNAME: string;
@@ -127,7 +127,7 @@ export interface RespondToAuthChallengeCustomChallengeNameRequest extends Respon
   };
 }
 
-export interface RespondToAuthChallengeNewPasswordRequiredRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeNewPasswordRequiredRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'NEW_PASSWORD_REQUIRED';
   ChallengeResponses: {
     USERNAME: string;
@@ -136,7 +136,7 @@ export interface RespondToAuthChallengeNewPasswordRequiredRequest extends Respon
   };
 }
 
-export interface RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SOFTWARE_TOKEN_MFA';
   ChallengeResponses: {
     USERNAME: string;
@@ -145,7 +145,7 @@ export interface RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondTo
   };
 }
 
-export interface RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'DEVICE_SRP_AUTH';
   ChallengeResponses: {
     USERNAME: string;
@@ -154,7 +154,7 @@ export interface RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAut
   };
 }
 
-export interface RespondToAuthChallengeDevicePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeDevicePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'DEVICE_PASSWORD_VERIFIER';
   ChallengeResponses: {
     USERNAME: string;
@@ -166,7 +166,7 @@ export interface RespondToAuthChallengeDevicePasswordVerifierRequest extends Res
   };
 }
 
-export interface RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'MFA_SETUP';
   ChallengeResponses: {
     USERNAME: string;
@@ -176,7 +176,7 @@ export interface RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChal
   };
 }
 
-export interface RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SELECT_MFA_TYPE';
   ChallengeResponses: {
     USERNAME: string;
@@ -185,16 +185,27 @@ export interface RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAut
   };
 }
 
+type _RespondToAuthChallengeRequest =
+  | _RespondToAuthChallengePasswordVerifierRequest
+  | _RespondToAuthChallengeSmsMfaRequest
+  | _RespondToAuthChallengeCustomChallengeNameRequest
+  | _RespondToAuthChallengeNewPasswordRequiredRequest
+  | _RespondToAuthChallengeSoftwareTokenMfaRequest
+  | _RespondToAuthChallengeDeviceSrpAuthRequest
+  | _RespondToAuthChallengeDevicePasswordVerifierRequest
+  | _RespondToAuthChallengeMfaSetupRequest
+  | _RespondToAuthChallengeSelectMfaTypeRequest;
+
 export type RespondToAuthChallengeRequest =
-  | RespondToAuthChallengePasswordVerifierRequest
-  | RespondToAuthChallengeSmsMfaRequest
-  | RespondToAuthChallengeCustomChallengeNameRequest
-  | RespondToAuthChallengeNewPasswordRequiredRequest
-  | RespondToAuthChallengeSoftwareTokenMfaRequest
-  | RespondToAuthChallengeDeviceSrpAuthRequest
-  | RespondToAuthChallengeDevicePasswordVerifierRequest
-  | RespondToAuthChallengeMfaSetupRequest
-  | RespondToAuthChallengeSelectMfaTypeRequest;
+  | Omit<_RespondToAuthChallengePasswordVerifierRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSmsMfaRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeCustomChallengeNameRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeNewPasswordRequiredRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSoftwareTokenMfaRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeDeviceSrpAuthRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeDevicePasswordVerifierRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeMfaSetupRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>;
 
 export interface UserAttribute {
   Name: string;
@@ -344,7 +355,30 @@ export enum ServiceTarget {
   ResendConfirmationCode = 'ResendConfirmationCode',
   UpdateUserAttributes = 'UpdateUserAttributes',
   VerifyUserAttribute = 'VerifyUserAttribute',
-  GlobalSignOut = 'GlobalSignOut'
+  GlobalSignOut = 'GlobalSignOut',
+  GetUser = 'GetUser',
+  AssociateSoftwareToken = 'AssociateSoftwareToken',
+  VerifySoftwareToken = 'VerifySoftwareToken'
+}
+
+export interface AssociateSoftwareTokenRequest {
+  AccessToken?: string;
+  Session?: string;
+}
+export interface AssociateSoftwareResponse {
+  SecretCode: string;
+  Session: string;
+}
+
+export interface VerifySoftwareTokenRequest {
+  AccessToken?: string;
+  FriendlyDeviceName?: string;
+  Session?: string;
+  UserCode: string;
+}
+export interface VerifySoftwareTokenResponse {
+  Session: string;
+  Status: 'SUCCESS' | 'ERROR';
 }
 
 /**
@@ -372,12 +406,6 @@ export interface NewDeviceMetadata {
   DeviceGroupKey?: string;
 }
 
-export interface RespondToAuthChallengeResponse {
-  AuthenticationResult: AuthenticationResult;
-  TokenType?: string;
-  session?: never;
-}
-
 export interface InitiateAuthAuthenticationResponse {
   AuthenticationResult: AuthenticationResult;
   ChallengeName?: never;
@@ -397,6 +425,12 @@ export interface InitiateAuthPasswordVerifierChallengeResponse {
   session?: never;
 }
 
+export interface InitiateAuthSoftwareTokenMfaChallengeResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'SOFTWARE_TOKEN_MFA';
+  Session: string;
+}
+
 export interface InitiateEmailOtpChallengeResponse {
   ChallengeName: 'EMAIL_OTP';
   ChallengeParameters: {
@@ -406,7 +440,21 @@ export interface InitiateEmailOtpChallengeResponse {
   session: string;
 }
 
-export type InitiateAuthChallengeResponse = InitiateAuthPasswordVerifierChallengeResponse;
+export interface MfaOption {
+  DeliveryMedium: 'SMS' | 'EMAIL';
+  AttributeName: string;
+}
+export interface GetUserResponse {
+  UserAttributes: UserAttribute[];
+  Username: string;
+  UserMFASettingList?: string[];
+  MFAOptions?: MfaOption[];
+  PreferredMfaSetting: string;
+}
+
+export type InitiateAuthChallengeResponse =
+  | InitiateAuthPasswordVerifierChallengeResponse
+  | InitiateAuthSoftwareTokenMfaChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
@@ -415,7 +463,7 @@ export type InitiateAuthResponse =
 
 type CognitoResponseMap = {
   [ServiceTarget.InitiateAuth]: InitiateAuthResponse;
-  [ServiceTarget.RespondToAuthChallenge]: RespondToAuthChallengeResponse;
+  [ServiceTarget.RespondToAuthChallenge]: InitiateAuthResponse;
   [ServiceTarget.SignUp]: { UserConfirmed: boolean; UserSub: string };
   [ServiceTarget.ConfirmSignUp]: void;
   [ServiceTarget.ChangePassword]: void;
@@ -426,11 +474,14 @@ type CognitoResponseMap = {
   [ServiceTarget.UpdateUserAttributes]: void;
   [ServiceTarget.VerifyUserAttribute]: void;
   [ServiceTarget.GlobalSignOut]: void;
+  [ServiceTarget.GetUser]: GetUserResponse;
+  [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareResponse;
+  [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
 };
 
 type CognitoRequestMap = {
   [ServiceTarget.InitiateAuth]: InitiateAuthRequest;
-  [ServiceTarget.RespondToAuthChallenge]: RespondToAuthChallengeRequest;
+  [ServiceTarget.RespondToAuthChallenge]: _RespondToAuthChallengeRequest;
   [ServiceTarget.SignUp]: SignUpRequest;
   [ServiceTarget.ConfirmSignUp]: ConfirmSignUpRequest;
   [ServiceTarget.ChangePassword]: {
@@ -458,6 +509,11 @@ type CognitoRequestMap = {
   [ServiceTarget.GlobalSignOut]: {
     AccessToken: string;
   };
+  [ServiceTarget.GetUser]: {
+    AccessToken: string;
+  };
+  [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareTokenRequest;
+  [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
 };
 
 export function adaptExpiresIn(auth: AuthenticationResult) {
@@ -586,11 +642,11 @@ export class CognitoClient {
    *
    * @throws {InitAuthError, CognitoRespondToAuthChallengeError}
    */
-  async authenticateUserSrp(username: string, password: string): Promise<AuthenticationResult> {
+  async authenticateUserSrp(username: string, password: string): Promise<InitiateAuthResponse> {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
-    const initAuthResponse = await cognitoRequest(
+    const initUserSrpAuthResponse = await cognitoRequest(
       {
         AuthFlow: 'USER_SRP_AUTH',
         ClientId: this.userPoolClientId,
@@ -606,17 +662,17 @@ export class CognitoClient {
       this.cognitoEndpoint
     );
 
-    if (initAuthResponse.ChallengeName !== 'PASSWORD_VERIFIER') {
-      throw new Error('Unexpected challenge name');
+    if (initUserSrpAuthResponse.ChallengeName !== 'PASSWORD_VERIFIER') {
+      return initUserSrpAuthResponse;
     }
 
-    const B = BigInt('0x' + initAuthResponse.ChallengeParameters.SRP_B);
-    const salt = BigInt('0x' + initAuthResponse.ChallengeParameters.SALT);
+    const B = BigInt('0x' + initUserSrpAuthResponse.ChallengeParameters.SRP_B);
+    const salt = BigInt('0x' + initUserSrpAuthResponse.ChallengeParameters.SALT);
     const U = await calculateU(A, B);
 
     const hkdf = await getPasswordAuthenticationKey(
       this.cognitoPoolName,
-      initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+      initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
       password,
       B,
       U,
@@ -626,39 +682,36 @@ export class CognitoClient {
 
     const { signature, timeStamp } = await calculateSignature(
       this.cognitoPoolName,
-      initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
-      initAuthResponse.ChallengeParameters.SECRET_BLOCK,
+      initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+      initUserSrpAuthResponse.ChallengeParameters.SECRET_BLOCK,
       hkdf
     );
 
-    const { AuthenticationResult } = await cognitoRequest(
-      {
-        ChallengeName: 'PASSWORD_VERIFIER',
-        ClientId: this.userPoolClientId,
-        ChallengeResponses: {
-          PASSWORD_CLAIM_SECRET_BLOCK: initAuthResponse.ChallengeParameters.SECRET_BLOCK,
-          PASSWORD_CLAIM_SIGNATURE: signature,
-          USERNAME: initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
-          TIMESTAMP: timeStamp,
-          SECRET_HASH:
-            this.clientSecret &&
-            (await calculateSecretHash(
-              this.clientSecret,
-              this.userPoolClientId,
-              initAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
-            ))
-        },
-        ClientMetadata: {}
+    const passwordAuthChallengeResponse = await this.respondToAuthChallenge({
+      ChallengeName: 'PASSWORD_VERIFIER',
+      ChallengeResponses: {
+        PASSWORD_CLAIM_SECRET_BLOCK: initUserSrpAuthResponse.ChallengeParameters.SECRET_BLOCK,
+        PASSWORD_CLAIM_SIGNATURE: signature,
+        USERNAME: initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+        TIMESTAMP: timeStamp,
+        SECRET_HASH:
+          this.clientSecret &&
+          (await calculateSecretHash(
+            this.clientSecret,
+            this.userPoolClientId,
+            initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
+          ))
       },
-      ServiceTarget.RespondToAuthChallenge,
-      this.cognitoEndpoint
-    );
+      ClientMetadata: {}
+    });
 
-    if (!AuthenticationResult) {
-      throw new Error('Authentication failed, no authentication result returned');
+    if (passwordAuthChallengeResponse.AuthenticationResult) {
+      passwordAuthChallengeResponse.AuthenticationResult = adaptExpiresIn(
+        passwordAuthChallengeResponse.AuthenticationResult
+      );
     }
 
-    return adaptExpiresIn(AuthenticationResult);
+    return passwordAuthChallengeResponse;
   }
 
   /**
@@ -799,6 +852,33 @@ export class CognitoClient {
     };
 
     await cognitoRequest(changePasswordPayload, ServiceTarget.ChangePassword, this.cognitoEndpoint);
+  }
+
+  async getUser(accessToken: string): Promise<GetUserResponse> {
+    const getUserPayload = {
+      AccessToken: accessToken
+    };
+
+    return cognitoRequest(getUserPayload, ServiceTarget.GetUser, this.cognitoEndpoint);
+  }
+
+  async associateSoftwareToken(params: AssociateSoftwareTokenRequest): Promise<AssociateSoftwareResponse> {
+    return cognitoRequest(params, ServiceTarget.AssociateSoftwareToken, this.cognitoEndpoint);
+  }
+
+  async verifySoftwareToken(params: VerifySoftwareTokenRequest): Promise<VerifySoftwareTokenResponse> {
+    return cognitoRequest(params, ServiceTarget.VerifySoftwareToken, this.cognitoEndpoint);
+  }
+
+  async respondToAuthChallenge(params: RespondToAuthChallengeRequest): Promise<InitiateAuthResponse> {
+    return cognitoRequest(
+      {
+        ...params,
+        ClientId: this.userPoolClientId
+      },
+      ServiceTarget.RespondToAuthChallenge,
+      this.cognitoEndpoint
+    );
   }
 
   /**
