@@ -25,7 +25,9 @@ import {
   VerifyUserAttributeException,
   COMMON_EXCEPTIONS,
   CommonError,
-  CommonException
+  CommonException,
+  VerifySoftwareTokenError,
+  VerifySoftwareTokenException
 } from './error.js';
 
 import {
@@ -48,14 +50,13 @@ export interface CognitoBaseRequest {
   AnalyticsMetadata?: {
     AnalyticsEndpointId: string;
   };
-
   UserContextData?: {
     EncodedData?: string;
     IpAddress?: string;
   };
 }
 
-export interface AuthIntiUserSrpRequest extends CognitoBaseRequest {
+export interface InitiateAuthUserSrpAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_SRP_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -64,7 +65,7 @@ export interface AuthIntiUserSrpRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiUserPasswordRequest extends CognitoBaseRequest {
+export interface InitiateAuthUserPasswordAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_PASSWORD_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -73,7 +74,7 @@ export interface AuthIntiUserPasswordRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiRefreshTokenRequest extends CognitoBaseRequest {
+export interface InitiateAuthRefreshTokenAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'REFRESH_TOKEN_AUTH';
   AuthParameters: {
     REFRESH_TOKEN: string;
@@ -81,7 +82,7 @@ export interface AuthIntiRefreshTokenRequest extends CognitoBaseRequest {
   };
 }
 
-export interface AuthIntiCustomAuthRequest extends CognitoBaseRequest {
+export interface InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'CUSTOM_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -89,17 +90,17 @@ export interface AuthIntiCustomAuthRequest extends CognitoBaseRequest {
   };
 }
 
-export type AuthIntiRequest =
-  | AuthIntiUserSrpRequest
-  | AuthIntiRefreshTokenRequest
-  | AuthIntiCustomAuthRequest
-  | AuthIntiUserPasswordRequest;
+export type InitiateAuthRequest =
+  | InitiateAuthUserSrpAuthRequest
+  | InitiateAuthRefreshTokenAuthRequest
+  | InitiateAuthCustomAuthRequest
+  | InitiateAuthUserPasswordAuthRequest;
 
 export interface RespondToAuthChallengeBaseRequest extends CognitoBaseRequest {
   Session?: string;
 }
 
-export interface RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeResponses: {
     USERNAME: string;
@@ -110,7 +111,7 @@ export interface RespondToAuthChallengePasswordVerifierRequest extends RespondTo
   };
 }
 
-export interface RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SMS_MFA';
   ChallengeResponses: {
     USERNAME: string;
@@ -119,7 +120,7 @@ export interface RespondToAuthChallengeSmsMfaRequest extends RespondToAuthChalle
   };
 }
 
-export interface RespondToAuthChallengeCustomChallengeNameRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeCustomChallengeNameRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'CUSTOM_CHALLENGE';
   ChallengeResponses: {
     USERNAME: string;
@@ -128,7 +129,7 @@ export interface RespondToAuthChallengeCustomChallengeNameRequest extends Respon
   };
 }
 
-export interface RespondToAuthChallengeNewPasswordRequiredRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeNewPasswordRequiredRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'NEW_PASSWORD_REQUIRED';
   ChallengeResponses: {
     USERNAME: string;
@@ -137,7 +138,7 @@ export interface RespondToAuthChallengeNewPasswordRequiredRequest extends Respon
   };
 }
 
-export interface RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SOFTWARE_TOKEN_MFA';
   ChallengeResponses: {
     USERNAME: string;
@@ -146,7 +147,7 @@ export interface RespondToAuthChallengeSoftwareTokenMfaRequest extends RespondTo
   };
 }
 
-export interface RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'DEVICE_SRP_AUTH';
   ChallengeResponses: {
     USERNAME: string;
@@ -155,7 +156,7 @@ export interface RespondToAuthChallengeDeviceSrpAuthRequest extends RespondToAut
   };
 }
 
-export interface RespondToAuthChallengeDevicePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeDevicePasswordVerifierRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'DEVICE_PASSWORD_VERIFIER';
   ChallengeResponses: {
     USERNAME: string;
@@ -167,7 +168,7 @@ export interface RespondToAuthChallengeDevicePasswordVerifierRequest extends Res
   };
 }
 
-export interface RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'MFA_SETUP';
   ChallengeResponses: {
     USERNAME: string;
@@ -177,7 +178,7 @@ export interface RespondToAuthChallengeMfaSetupRequest extends RespondToAuthChal
   };
 }
 
-export interface RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
+export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
   ChallengeName: 'SELECT_MFA_TYPE';
   ChallengeResponses: {
     USERNAME: string;
@@ -186,16 +187,27 @@ export interface RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAut
   };
 }
 
+type _RespondToAuthChallengeRequest =
+  | _RespondToAuthChallengePasswordVerifierRequest
+  | _RespondToAuthChallengeSmsMfaRequest
+  | _RespondToAuthChallengeCustomChallengeNameRequest
+  | _RespondToAuthChallengeNewPasswordRequiredRequest
+  | _RespondToAuthChallengeSoftwareTokenMfaRequest
+  | _RespondToAuthChallengeDeviceSrpAuthRequest
+  | _RespondToAuthChallengeDevicePasswordVerifierRequest
+  | _RespondToAuthChallengeMfaSetupRequest
+  | _RespondToAuthChallengeSelectMfaTypeRequest;
+
 export type RespondToAuthChallengeRequest =
-  | RespondToAuthChallengePasswordVerifierRequest
-  | RespondToAuthChallengeSmsMfaRequest
-  | RespondToAuthChallengeCustomChallengeNameRequest
-  | RespondToAuthChallengeNewPasswordRequiredRequest
-  | RespondToAuthChallengeSoftwareTokenMfaRequest
-  | RespondToAuthChallengeDeviceSrpAuthRequest
-  | RespondToAuthChallengeDevicePasswordVerifierRequest
-  | RespondToAuthChallengeMfaSetupRequest
-  | RespondToAuthChallengeSelectMfaTypeRequest;
+  | Omit<_RespondToAuthChallengePasswordVerifierRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSmsMfaRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeCustomChallengeNameRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeNewPasswordRequiredRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSoftwareTokenMfaRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeDeviceSrpAuthRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeDevicePasswordVerifierRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeMfaSetupRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>;
 
 export interface UserAttribute {
   Name: string;
@@ -290,31 +302,6 @@ export interface CognitoClientProps {
 }
 
 /**
- * Cognito User Session
- */
-export interface Session {
-  /**
-   * JWT Access Token
-   */
-  accessToken: string;
-
-  /**
-   * JWT ID Token
-   */
-  idToken: string;
-
-  /**
-   * JWT refresh token
-   */
-  refreshToken: string;
-
-  /**
-   * Validity of the session in time stamp as milliseconds.
-   */
-  expiresIn: number;
-}
-
-/**
  * Represents the decoded values from a JWT ID token.
  */
 export interface IdToken extends Record<string, string | string[] | number | boolean> {
@@ -370,7 +357,55 @@ export enum ServiceTarget {
   ResendConfirmationCode = 'ResendConfirmationCode',
   UpdateUserAttributes = 'UpdateUserAttributes',
   VerifyUserAttribute = 'VerifyUserAttribute',
-  GlobalSignOut = 'GlobalSignOut'
+  GlobalSignOut = 'GlobalSignOut',
+  GetUser = 'GetUser',
+  AssociateSoftwareToken = 'AssociateSoftwareToken',
+  VerifySoftwareToken = 'VerifySoftwareToken',
+  ListDevices = 'ListDevices',
+  SetUserMFAPreference = 'SetUserMFAPreference'
+}
+
+export interface AssociateSoftwareTokenRequest {
+  AccessToken?: string;
+  Session?: string;
+}
+export interface AssociateSoftwareResponse {
+  SecretCode: string;
+  Session: string;
+}
+
+export interface VerifySoftwareTokenRequest {
+  AccessToken?: string;
+  FriendlyDeviceName?: string;
+  Session?: string;
+  UserCode: string;
+}
+export interface VerifySoftwareTokenResponse {
+  Session: string;
+  Status: 'SUCCESS' | 'ERROR';
+}
+
+export interface ListDevicesRequest {
+  AccessToken: string;
+  Limit: number;
+  PaginationToken?: 'string';
+}
+
+export interface Device {
+  DeviceAttributes: [
+    {
+      Name: string;
+      Value: string;
+    }
+  ];
+  DeviceCreateDate: number;
+  DeviceKey: string;
+  DeviceLastAuthenticatedDate: number;
+  DeviceLastModifiedDate: number;
+}
+export interface ListDevicesResponse {
+  Devices: Device[];
+  PaginationToken?: string;
 }
 
 /**
@@ -390,13 +425,22 @@ export interface AuthenticationResult {
   ExpiresIn: number;
   IdToken: string;
   RefreshToken: string;
+  NewDeviceMetadata?: NewDeviceMetadata;
 }
 
-export interface AuthenticationResponse {
+export interface NewDeviceMetadata {
+  DeviceKey?: string;
+  DeviceGroupKey?: string;
+}
+
+export interface InitiateAuthAuthenticationResponse {
   AuthenticationResult: AuthenticationResult;
+  ChallengeName?: never;
+  session?: never;
 }
 
-export interface ChallengeResponse {
+export interface InitiateAuthPasswordVerifierChallengeResponse {
+  AuthenticationResult?: never;
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeParameters: {
     SALT: string;
@@ -405,16 +449,133 @@ export interface ChallengeResponse {
     USERNAME: string;
     USER_ID_FOR_SRP: string;
   };
+  session?: never;
 }
 
-export function authResultToSession(authenticationResult: AuthenticationResult): Session {
-  return {
-    accessToken: authenticationResult.AccessToken,
-    idToken: authenticationResult.IdToken,
-    expiresIn: new Date().getTime() + authenticationResult.ExpiresIn * 1000,
-    refreshToken: authenticationResult.RefreshToken
+export interface InitiateAuthSoftwareTokenMfaChallengeResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'SOFTWARE_TOKEN_MFA';
+  Session: string;
+}
+
+export interface InitiateEmailOtpChallengeResponse {
+  ChallengeName: 'EMAIL_OTP';
+  ChallengeParameters: {
+    CODE_DELIVERY_DELIVERY_MEDIUM: string;
+    CODE_DELIVERY_DESTINATION: string;
+  };
+  session: string;
+}
+
+export interface MfaOption {
+  DeliveryMedium: 'SMS' | 'EMAIL';
+  AttributeName: string;
+}
+export interface GetUserResponse {
+  UserAttributes: UserAttribute[];
+  Username: string;
+  UserMFASettingList?: string[];
+  MFAOptions?: MfaOption[];
+  PreferredMfaSetting: string;
+}
+
+export interface SetUserMFAPreferenceRequest {
+  AccessToken: string;
+  EmailMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
+  };
+  SMSMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
+  };
+  SoftwareTokenMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
   };
 }
+
+export type InitiateAuthChallengeResponse =
+  | InitiateAuthPasswordVerifierChallengeResponse
+  | InitiateAuthSoftwareTokenMfaChallengeResponse;
+
+export type InitiateAuthResponse =
+  | InitiateAuthAuthenticationResponse
+  | InitiateAuthPasswordVerifierChallengeResponse
+  | InitiateAuthChallengeResponse;
+
+type CognitoResponseMap = {
+  [ServiceTarget.InitiateAuth]: InitiateAuthResponse;
+  [ServiceTarget.RespondToAuthChallenge]: InitiateAuthResponse;
+  [ServiceTarget.SignUp]: { UserConfirmed: boolean; UserSub: string };
+  [ServiceTarget.ConfirmSignUp]: void;
+  [ServiceTarget.ChangePassword]: void;
+  [ServiceTarget.RevokeToken]: void;
+  [ServiceTarget.ForgotPassword]: void;
+  [ServiceTarget.ConfirmForgotPassword]: void;
+  [ServiceTarget.ResendConfirmationCode]: void;
+  [ServiceTarget.UpdateUserAttributes]: void;
+  [ServiceTarget.VerifyUserAttribute]: void;
+  [ServiceTarget.GlobalSignOut]: void;
+  [ServiceTarget.GetUser]: GetUserResponse;
+  [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareResponse;
+  [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
+  [ServiceTarget.ListDevices]: ListDevicesResponse;
+  [ServiceTarget.SetUserMFAPreference]: void;
+};
+
+type CognitoRequestMap = {
+  [ServiceTarget.InitiateAuth]: InitiateAuthRequest;
+  [ServiceTarget.RespondToAuthChallenge]: _RespondToAuthChallengeRequest;
+  [ServiceTarget.SignUp]: SignUpRequest;
+  [ServiceTarget.ConfirmSignUp]: ConfirmSignUpRequest;
+  [ServiceTarget.ChangePassword]: {
+    PreviousPassword: string;
+    ProposedPassword: string;
+    AccessToken: string;
+  };
+  [ServiceTarget.RevokeToken]: {
+    Token: string;
+    ClientId: string;
+    ClientSecret?: string;
+  };
+  [ServiceTarget.ForgotPassword]: ForgotPasswordRequest;
+  [ServiceTarget.ConfirmForgotPassword]: ConfirmForgotPasswordRequest;
+  [ServiceTarget.ResendConfirmationCode]: ResendConfirmationCodeRequest;
+  [ServiceTarget.UpdateUserAttributes]: {
+    UserAttributes: UserAttribute[];
+    AccessToken: string;
+  };
+  [ServiceTarget.VerifyUserAttribute]: {
+    AttributeName: string;
+    Code: string;
+    AccessToken: string;
+  };
+  [ServiceTarget.GlobalSignOut]: {
+    AccessToken: string;
+  };
+  [ServiceTarget.GetUser]: {
+    AccessToken: string;
+  };
+  [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareTokenRequest;
+  [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
+  [ServiceTarget.ListDevices]: ListDevicesRequest;
+  [ServiceTarget.SetUserMFAPreference]: SetUserMFAPreferenceRequest;
+};
+
+export function adaptExpiresIn(auth: AuthenticationResult) {
+  // Cognito returns expiresIn in seconds, but we want it in milliseconds from now
+  return {
+    ...auth,
+    ExpiresIn: new Date().getTime() + auth.ExpiresIn * 1000
+  };
+}
+
+export async function cognitoRequest<T extends ServiceTarget>(
+  body: CognitoRequestMap[T],
+  serviceTarget: T,
+  cognitoEndpoint: string
+): Promise<CognitoResponseMap[T]>;
 
 export async function cognitoRequest(body: object, serviceTarget: ServiceTarget, cognitoEndpoint: string) {
   const cognitoResponse = await fetch(cognitoEndpoint, {
@@ -487,6 +648,8 @@ export async function cognitoRequest(body: object, serviceTarget: ServiceTarget,
       throw new VerifyUserAttributeError(errorMessage, cognitoException as VerifyUserAttributeException);
     case ServiceTarget.GlobalSignOut:
       throw new GlobalSignOutError(errorMessage, cognitoException as GlobalSignOutException);
+    case ServiceTarget.VerifySoftwareToken:
+      throw new VerifySoftwareTokenError(errorMessage, cognitoException as VerifySoftwareTokenException);
   }
 }
 
@@ -509,9 +672,9 @@ export class CognitoClient {
     this.clientSecret = clientSecret;
   }
 
-  static getDecodedTokenFromSession(session: Session): DecodedTokens {
-    const { payload: idToken } = decodeJwt<IdToken>(session.idToken);
-    const { payload: accessToken } = decodeJwt<AccessToken>(session.accessToken);
+  static getDecodedTokenFromSession(auth: AuthenticationResult): DecodedTokens {
+    const { payload: idToken } = decodeJwt<IdToken>(auth.IdToken);
+    const { payload: accessToken } = decodeJwt<AccessToken>(auth.AccessToken);
     return {
       idToken,
       accessToken
@@ -528,35 +691,37 @@ export class CognitoClient {
    *
    * @throws {InitAuthError, CognitoRespondToAuthChallengeError}
    */
-  async authenticateUserSrp(username: string, password: string): Promise<Session> {
+  async authenticateUserSrp(username: string, password: string): Promise<InitiateAuthResponse> {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
-    const initiateAuthPayload: AuthIntiRequest = {
-      AuthFlow: 'USER_SRP_AUTH',
-      ClientId: this.userPoolClientId,
-      AuthParameters: {
-        USERNAME: username,
-        SRP_A: A.toString(16),
-        SECRET_HASH:
-          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+    const initUserSrpAuthResponse = await cognitoRequest(
+      {
+        AuthFlow: 'USER_SRP_AUTH',
+        ClientId: this.userPoolClientId,
+        AuthParameters: {
+          USERNAME: username,
+          SRP_A: A.toString(16),
+          SECRET_HASH:
+            this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+        },
+        ClientMetadata: {}
       },
-      ClientMetadata: {}
-    };
-
-    const challenge = (await cognitoRequest(
-      initiateAuthPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as ChallengeResponse;
+    );
 
-    const B = BigInt('0x' + challenge.ChallengeParameters.SRP_B);
-    const salt = BigInt('0x' + challenge.ChallengeParameters.SALT);
+    if (initUserSrpAuthResponse.ChallengeName !== 'PASSWORD_VERIFIER') {
+      return initUserSrpAuthResponse;
+    }
+
+    const B = BigInt('0x' + initUserSrpAuthResponse.ChallengeParameters.SRP_B);
+    const salt = BigInt('0x' + initUserSrpAuthResponse.ChallengeParameters.SALT);
     const U = await calculateU(A, B);
 
     const hkdf = await getPasswordAuthenticationKey(
       this.cognitoPoolName,
-      challenge.ChallengeParameters.USER_ID_FOR_SRP,
+      initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
       password,
       B,
       U,
@@ -566,37 +731,36 @@ export class CognitoClient {
 
     const { signature, timeStamp } = await calculateSignature(
       this.cognitoPoolName,
-      challenge.ChallengeParameters.USER_ID_FOR_SRP,
-      challenge.ChallengeParameters.SECRET_BLOCK,
+      initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
+      initUserSrpAuthResponse.ChallengeParameters.SECRET_BLOCK,
       hkdf
     );
 
-    const respondToAuthChallengeRequest: RespondToAuthChallengeRequest = {
+    const passwordAuthChallengeResponse = await this.respondToAuthChallenge({
       ChallengeName: 'PASSWORD_VERIFIER',
-      ClientId: this.userPoolClientId,
       ChallengeResponses: {
-        PASSWORD_CLAIM_SECRET_BLOCK: challenge.ChallengeParameters.SECRET_BLOCK,
+        PASSWORD_CLAIM_SECRET_BLOCK: initUserSrpAuthResponse.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
-        USERNAME: challenge.ChallengeParameters.USER_ID_FOR_SRP,
+        USERNAME: initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
         TIMESTAMP: timeStamp,
         SECRET_HASH:
           this.clientSecret &&
           (await calculateSecretHash(
             this.clientSecret,
             this.userPoolClientId,
-            challenge.ChallengeParameters.USER_ID_FOR_SRP
+            initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
           ))
       },
       ClientMetadata: {}
-    };
+    });
 
-    const { AuthenticationResult } = await cognitoRequest(
-      respondToAuthChallengeRequest,
-      ServiceTarget.RespondToAuthChallenge,
-      this.cognitoEndpoint
-    );
+    if (passwordAuthChallengeResponse.AuthenticationResult) {
+      passwordAuthChallengeResponse.AuthenticationResult = adaptExpiresIn(
+        passwordAuthChallengeResponse.AuthenticationResult
+      );
+    }
 
-    return authResultToSession(AuthenticationResult);
+    return passwordAuthChallengeResponse;
   }
 
   /**
@@ -608,8 +772,8 @@ export class CognitoClient {
    * @param password Password
    * @throws {InitAuthError}
    */
-  async authenticateUser(username: string, password: string): Promise<Session> {
-    const initiateAuthPayload: AuthIntiRequest = {
+  async authenticateUser(username: string, password: string): Promise<InitiateAuthResponse> {
+    const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
@@ -621,14 +785,21 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await cognitoRequest(
+    const initUserPasswordAuthResponse = await cognitoRequest(
       initiateAuthPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as AuthenticationResponse;
+    );
 
-    const session = authResultToSession(AuthenticationResult);
-    return session;
+    if (!initUserPasswordAuthResponse.AuthenticationResult) {
+      return initUserPasswordAuthResponse;
+    }
+
+    initUserPasswordAuthResponse.AuthenticationResult = adaptExpiresIn(
+      initUserPasswordAuthResponse.AuthenticationResult
+    );
+
+    return initUserPasswordAuthResponse;
   }
 
   /**
@@ -639,8 +810,8 @@ export class CognitoClient {
    * @returns @see Session
    * @throws {InitAuthError}
    */
-  public async refreshSession(refreshToken: string, username?: string): Promise<Session> {
-    const refreshTokenPayload: AuthIntiRequest = {
+  public async refreshSession(refreshToken: string, username?: string): Promise<AuthenticationResult> {
+    const refreshTokenPayload: InitiateAuthRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       ClientId: this.userPoolClientId,
       AuthParameters: {
@@ -653,17 +824,24 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = (await cognitoRequest(
+    const { AuthenticationResult } = await cognitoRequest(
       refreshTokenPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
-    )) as AuthenticationResponse;
+    );
+
+    if (!AuthenticationResult) {
+      throw new InitAuthError(
+        'Authentication failed, no authentication result returned',
+        InitiateAuthException.InternalErrorException
+      );
+    }
 
     if (!AuthenticationResult.RefreshToken) {
       AuthenticationResult.RefreshToken = refreshToken;
     }
 
-    return authResultToSession(AuthenticationResult);
+    return adaptExpiresIn(AuthenticationResult);
   }
 
   /**
@@ -724,6 +902,70 @@ export class CognitoClient {
     };
 
     await cognitoRequest(changePasswordPayload, ServiceTarget.ChangePassword, this.cognitoEndpoint);
+  }
+
+  async getUser(accessToken: string): Promise<GetUserResponse> {
+    const getUserPayload = {
+      AccessToken: accessToken
+    };
+
+    return cognitoRequest(getUserPayload, ServiceTarget.GetUser, this.cognitoEndpoint);
+  }
+
+  async associateSoftwareToken(params: AssociateSoftwareTokenRequest): Promise<AssociateSoftwareResponse> {
+    return cognitoRequest(params, ServiceTarget.AssociateSoftwareToken, this.cognitoEndpoint);
+  }
+
+  async verifySoftwareToken(params: VerifySoftwareTokenRequest): Promise<VerifySoftwareTokenResponse> {
+    return cognitoRequest(params, ServiceTarget.VerifySoftwareToken, this.cognitoEndpoint);
+  }
+
+  /**
+   * Responds to an authentication challenge.
+   * @param params Request to respond to an authentication challenge.
+   * @param params.ChallengeName Name of the challenge to respond to.
+   * @param params.ChallengeResponses Responses to the challenge.
+   * @param params.Session Session identifier for the authentication process.
+   * @param params.ClientMetadata Optional metadata to pass to the service.
+   * @param params.AccessToken Access token of the current user.
+   * @param params.SecretHash Optional secret hash for the user pool client.
+   * @returns
+   */
+  async respondToAuthChallenge(params: RespondToAuthChallengeRequest): Promise<InitiateAuthResponse> {
+    return cognitoRequest(
+      {
+        ...params,
+        ClientId: this.userPoolClientId
+      },
+      ServiceTarget.RespondToAuthChallenge,
+      this.cognitoEndpoint
+    );
+  }
+
+  /**
+   * Lists the devices associated with the user.
+   * @param request Request to list devices.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.Limit Maximum number of devices to return.
+   * @param request.PaginationToken Pagination token to continue listing devices.
+   * @returns
+   */
+  async listDevices(request: ListDevicesRequest): Promise<ListDevicesResponse> {
+    return cognitoRequest(request, ServiceTarget.ListDevices, this.cognitoEndpoint);
+  }
+
+  /**
+   * 
+   * @param request Request to set user MFA preferences.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.EmailMfaSettings Optional settings for email MFA.
+   * @param request.SMSMfaSettings Optional settings for SMS MFA.
+   * @param request.SoftwareTokenMfaSettings Optional settings for software token MFA.
+   
+   * @returns 
+   */
+  async setUserMFAPreference(request: SetUserMFAPreferenceRequest): Promise<void> {
+    return cognitoRequest(request, ServiceTarget.SetUserMFAPreference, this.cognitoEndpoint);
   }
 
   /**
@@ -883,7 +1125,7 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<Session> {
+  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<AuthenticationResult> {
     if (this.oAuth === undefined) {
       throw Error('You have to define oAuth options to use handleCodeFlow');
     }
@@ -923,14 +1165,12 @@ export class CognitoClient {
       throw new Error(error);
     }
 
-    const session = authResultToSession({
+    return adaptExpiresIn({
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,
       ExpiresIn: expires_in
     });
-
-    return session;
   }
 
   /**

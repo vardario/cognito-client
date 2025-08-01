@@ -88,26 +88,34 @@ async function cognitoClientTestWorkflow(client: CognitoClient) {
 
   await confirmUser(email);
 
-  let session = await client.authenticateUser(email, password);
+  let auth = await client.authenticateUser(email, password);
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  if (auth.AuthenticationResult === undefined) {
+    throw new Error('Authentication result is undefined');
+  }
 
-  session = await client.authenticateUserSrp(email, password);
+  expect(auth.AuthenticationResult.AccessToken).toBeDefined();
+  expect(auth.AuthenticationResult.IdToken).toBeDefined();
+  expect(auth.AuthenticationResult.RefreshToken).toBeDefined();
+  expect(auth.AuthenticationResult.ExpiresIn).toBeDefined();
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  auth = await client.authenticateUserSrp(email, password);
 
-  session = await client.refreshSession(session.refreshToken, user.id);
+  if (auth.AuthenticationResult === undefined) {
+    throw new Error('Authentication result is undefined');
+  }
 
-  expect(session.accessToken).toBeDefined();
-  expect(session.idToken).toBeDefined();
-  expect(session.refreshToken).toBeDefined();
-  expect(session.expiresIn).toBeDefined();
+  expect(auth.AuthenticationResult.AccessToken).toBeDefined();
+  expect(auth.AuthenticationResult.IdToken).toBeDefined();
+  expect(auth.AuthenticationResult.RefreshToken).toBeDefined();
+  expect(auth.AuthenticationResult.ExpiresIn).toBeDefined();
+
+  const authResult = await client.refreshSession(auth.AuthenticationResult.RefreshToken, user.id);
+
+  expect(authResult.AccessToken).toBeDefined();
+  expect(authResult.IdToken).toBeDefined();
+  expect(authResult.RefreshToken).toBeDefined();
+  expect(authResult.ExpiresIn).toBeDefined();
 
   await client.updateUserAttributes(
     [
@@ -116,17 +124,22 @@ async function cognitoClientTestWorkflow(client: CognitoClient) {
         Value: 'new name'
       }
     ],
-    session.accessToken
+    authResult.AccessToken
   );
 
-  await client.changePassword(password, newPassword, session.accessToken);
-  session = await client.authenticateUserSrp(email, newPassword);
+  await client.changePassword(password, newPassword, authResult.AccessToken);
+  auth = await client.authenticateUserSrp(email, newPassword);
 
-  await client.revokeToken(session.refreshToken);
+  await client.revokeToken(authResult.RefreshToken);
   await client.forgotPassword(email);
 
-  session = await client.authenticateUserSrp(email, newPassword);
-  await client.globalSignOut(session.accessToken);
+  auth = await client.authenticateUserSrp(email, newPassword);
+
+  if (auth.AuthenticationResult === undefined) {
+    throw new Error('Authentication result is undefined');
+  }
+
+  await client.globalSignOut(auth.AuthenticationResult.AccessToken);
 }
 
 describe('cognito client integration test', () => {

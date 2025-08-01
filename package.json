@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "pnpm build:lib && pnpm build:browser",
-    "build:browser": "esbuild src/index.ts --bundle --outfile=lib/browser.js --platform=neutral --external:zod",
+    "build:browser": "esbuild src/index.ts --bundle --outfile=lib/browser.js --platform=neutral",
     "build:lib": "tsc --build",
     "format": "prettier --plugin-search-dir . --write . && prettier-package-json --write && eslint --fix .",
     "integration-test": "vitest run integration",
