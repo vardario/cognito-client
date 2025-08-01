@@ -1,14 +1,6 @@
 import 'isomorphic-fetch';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import {
-  AuthenticationResult,
-  CognitoClient,
-  IdentityProvider,
-  ServiceTarget,
-  OAuth2Props,
-  authResultToSession,
-  cognitoRequest
-} from '../cognito-client.js';
+import { CognitoClient, IdentityProvider, ServiceTarget, OAuth2Props, cognitoRequest } from '../cognito-client.js';
 import { newUser, setupCognito, user } from './test-utils.js';
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 import { vi } from 'vitest';
@@ -110,9 +102,14 @@ describe('Cognito Client', () => {
     const newPassword = 'newPassword';
     expect(cognitoClient.authenticateUser(user.email, newPassword)).rejects.toThrow();
 
-    const session = await cognitoClient.authenticateUser(user.email, user.password);
-    await cognitoClient.changePassword(user.password, newPassword, session.accessToken);
-    await cognitoClient.revokeToken(session.refreshToken);
+    const auth = await cognitoClient.authenticateUser(user.email, user.password);
+
+    if (auth.AuthenticationResult === undefined) {
+      throw new Error('Authentication result is undefined');
+    }
+
+    await cognitoClient.changePassword(user.password, newPassword, auth.AuthenticationResult.AccessToken);
+    await cognitoClient.revokeToken(auth.AuthenticationResult.RefreshToken);
     expect(cognitoClient.authenticateUser(user.email, user.password)).rejects.toThrow();
     await cognitoClient.authenticateUser(user.email, newPassword);
   });
@@ -139,21 +136,6 @@ describe('Cognito Client', () => {
     await _test((searchParams: URLSearchParams) => {
       expect(searchParams.get('identity_provider')).toBe(IdentityProvider.Apple);
     }, IdentityProvider.Apple);
-  });
-
-  test('authResultToSession', () => {
-    const now = new Date();
-    const authResult: AuthenticationResult = {
-      AccessToken: 'aaaa',
-      ExpiresIn: 60,
-      IdToken: 'bbbb',
-      RefreshToken: 'cccc'
-    };
-    const session = authResultToSession(authResult);
-    expect(session.accessToken).toBe(authResult.AccessToken);
-    expect(session.idToken).toBe(authResult.IdToken);
-    expect(session.refreshToken).toBe(authResult.RefreshToken);
-    expect(session.expiresIn).toBe(authResult.ExpiresIn * 1000 + now.getTime());
   });
 
   test('cognitoRequest', async () => {
@@ -223,29 +205,95 @@ describe('Cognito Client', () => {
       ]
     );
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(cognitoRequest({}, ServiceTarget.InitiateAuth, 'http://localhost')).rejects.toThrowError(
-      new InitAuthError('test', 'code' as InitiateAuthException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AuthFlow: 'CUSTOM_AUTH',
+          ClientId: '',
+          AuthParameters: {
+            USERNAME: '',
+            SECRET_HASH: ''
+          }
+        },
+        ServiceTarget.InitiateAuth,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
     fetchMocker.mockResponse(
       JSON.stringify({
@@ -261,49 +309,136 @@ describe('Cognito Client', () => {
       }
     );
 
-    expect(cognitoRequest({}, ServiceTarget.RespondToAuthChallenge, 'http://localhost')).rejects.toThrowError(
-      new RespondToAuthChallengeError('test', 'code' as RespondToAuthChallengeException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ChallengeName: 'CUSTOM_CHALLENGE',
+          ClientId: '',
+          ChallengeResponses: {
+            ANSWER: '',
+            SECRET_HASH: '',
+            USERNAME: ''
+          }
+        },
+        ServiceTarget.RespondToAuthChallenge,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new RespondToAuthChallengeError('test', 'code' as RespondToAuthChallengeException));
 
-    expect(cognitoRequest({}, ServiceTarget.SignUp, 'http://localhost')).rejects.toThrowError(
-      new SignUpError('test', 'code' as SignUpException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          Password: '',
+          Username: ''
+        },
+        ServiceTarget.SignUp,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new SignUpError('test', 'code' as SignUpException));
 
-    expect(cognitoRequest({}, ServiceTarget.ConfirmSignUp, 'http://localhost')).rejects.toThrowError(
-      new ConfirmSignUpError('test', 'code' as ConfirmSignUpException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          ConfirmationCode: '',
+          Username: ''
+        },
+        ServiceTarget.ConfirmSignUp,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new ConfirmSignUpError('test', 'code' as ConfirmSignUpException));
 
-    expect(cognitoRequest({}, ServiceTarget.ChangePassword, 'http://localhost')).rejects.toThrowError(
-      new ChangePasswordError('test', 'code' as ChangePasswordException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AccessToken: '',
+          PreviousPassword: '',
+          ProposedPassword: ''
+        },
+        ServiceTarget.ChangePassword,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new ChangePasswordError('test', 'code' as ChangePasswordException));
 
-    expect(cognitoRequest({}, ServiceTarget.RevokeToken, 'http://localhost')).rejects.toThrowError(
-      new RevokeTokenError('test', 'code' as RevokeTokenException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          Token: ''
+        },
+        ServiceTarget.RevokeToken,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new RevokeTokenError('test', 'code' as RevokeTokenException));
 
-    expect(cognitoRequest({}, ServiceTarget.ForgotPassword, 'http://localhost')).rejects.toThrowError(
-      new ForgotPasswordError('test', 'code' as ForgotPasswordException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          Username: ''
+        },
+        ServiceTarget.ForgotPassword,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new ForgotPasswordError('test', 'code' as ForgotPasswordException));
 
-    expect(cognitoRequest({}, ServiceTarget.ConfirmForgotPassword, 'http://localhost')).rejects.toThrowError(
-      new ConfirmForgotPasswordError('test', 'code' as ConfirmForgotPasswordException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          ConfirmationCode: '',
+          Username: '',
+          Password: ''
+        },
+        ServiceTarget.ConfirmForgotPassword,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new ConfirmForgotPasswordError('test', 'code' as ConfirmForgotPasswordException));
 
-    expect(cognitoRequest({}, ServiceTarget.ResendConfirmationCode, 'http://localhost')).rejects.toThrowError(
-      new ResendConfirmationCodeError('test', 'code' as ResendConfirmationException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          ClientId: '',
+          Username: ''
+        },
+        ServiceTarget.ResendConfirmationCode,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new ResendConfirmationCodeError('test', 'code' as ResendConfirmationException));
 
-    expect(cognitoRequest({}, ServiceTarget.UpdateUserAttributes, 'http://localhost')).rejects.toThrowError(
-      new UpdateUserAttributesError('test', 'code' as UpdateUserAttributesException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AccessToken: '',
+          UserAttributes: []
+        },
+        ServiceTarget.UpdateUserAttributes,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new UpdateUserAttributesError('test', 'code' as UpdateUserAttributesException));
 
-    expect(cognitoRequest({}, ServiceTarget.VerifyUserAttribute, 'http://localhost')).rejects.toThrowError(
-      new VerifyUserAttributeError('test', 'code' as VerifyUserAttributeException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AccessToken: '',
+          AttributeName: '',
+          Code: ''
+        },
+        ServiceTarget.VerifyUserAttribute,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new VerifyUserAttributeError('test', 'code' as VerifyUserAttributeException));
 
-    expect(cognitoRequest({}, ServiceTarget.GlobalSignOut, 'http://localhost')).rejects.toThrowError(
-      new GlobalSignOutError('test', 'code' as GlobalSignOutException)
-    );
+    expect(
+      cognitoRequest(
+        {
+          AccessToken: ''
+        },
+        ServiceTarget.GlobalSignOut,
+        'http://localhost'
+      )
+    ).rejects.toThrowError(new GlobalSignOutError('test', 'code' as GlobalSignOutException));
 
     COMMON_EXCEPTIONS.forEach(exception => {
       fetchMocker.mockResponse(
@@ -320,9 +455,21 @@ describe('Cognito Client', () => {
         }
       );
 
-      expect(cognitoRequest({}, ServiceTarget.RespondToAuthChallenge, 'http://localhost')).rejects.toThrowError(
-        new CommonError('test', exception)
-      );
+      expect(
+        cognitoRequest(
+          {
+            ChallengeName: 'CUSTOM_CHALLENGE',
+            ClientId: '',
+            ChallengeResponses: {
+              ANSWER: '',
+              SECRET_HASH: '',
+              USERNAME: ''
+            }
+          },
+          ServiceTarget.RespondToAuthChallenge,
+          'http://localhost'
+        )
+      ).rejects.toThrowError(new CommonError('test', exception));
     });
   });
 });

@@ -130,5 +130,6 @@ dist
 .pnp.*
 
 /lib
+todos
 
 .DS_Store

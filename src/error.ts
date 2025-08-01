@@ -407,6 +407,7 @@ export type CognitoErrorType =
   | 'RespondToAuthChallengeError'
   | 'SignUpError'
   | 'ConfirmSignUpError'
+  | 'VerifySoftwareTokenError'
   | 'ChangePasswordError'
   | 'RevokeTokenError'
   | 'ForgotPasswordError'
@@ -414,6 +415,7 @@ export type CognitoErrorType =
   | 'ResendConfirmationCodeError'
   | 'UpdateUserAttributesError'
   | 'VerifyUserAttributeError'
+  | 'AssociateSoftwareTokenError'
   | 'GlobalSignOutError';
 
 export class CognitoError extends Error {
@@ -434,6 +436,8 @@ export class CognitoError extends Error {
       | UpdateUserAttributesException
       | VerifyUserAttributeException
       | GlobalSignOutException
+      | VerifySoftwareTokenException
+      | AssociateSoftwareTokenException
   ) {
     super(message);
   }
@@ -553,5 +557,23 @@ export class GlobalSignOutError extends CognitoError {
     public readonly cognitoException: GlobalSignOutException
   ) {
     super(message, 'GlobalSignOutError', cognitoException);
+  }
+}
+
+export class VerifySoftwareTokenError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: VerifySoftwareTokenException
+  ) {
+    super(message, 'VerifySoftwareTokenError', cognitoException);
+  }
+}
+
+export class AssociateSoftwareTokenError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: AssociateSoftwareTokenException
+  ) {
+    super(message, 'AssociateSoftwareTokenError', cognitoException);
   }
 }
