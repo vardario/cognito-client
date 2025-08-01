@@ -416,7 +416,10 @@ export type CognitoErrorType =
   | 'UpdateUserAttributesError'
   | 'VerifyUserAttributeError'
   | 'AssociateSoftwareTokenError'
-  | 'GlobalSignOutError';
+  | 'GlobalSignOutError'
+  | 'SetUserMFAPreferenceError'
+  | 'GetUserError'
+  | 'ListDevicesError';
 
 export class CognitoError extends Error {
   constructor(
@@ -438,6 +441,9 @@ export class CognitoError extends Error {
       | GlobalSignOutException
       | VerifySoftwareTokenException
       | AssociateSoftwareTokenException
+      | SetUserMFAPreferenceException
+      | ListDevicesException
+      | GetUserException
   ) {
     super(message);
   }
@@ -575,5 +581,31 @@ export class AssociateSoftwareTokenError extends CognitoError {
     public readonly cognitoException: AssociateSoftwareTokenException
   ) {
     super(message, 'AssociateSoftwareTokenError', cognitoException);
+  }
+}
+
+export class SetUserMFAPreferenceError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: SetUserMFAPreferenceException
+  ) {
+    super(message, 'SetUserMFAPreferenceError', cognitoException);
+  }
+}
+export class ListDevicesError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: ListDevicesException
+  ) {
+    super(message, 'ListDevicesError', cognitoException);
+  }
+}
+
+export class GetUserError extends CognitoError {
+  constructor(
+    message: string,
+    public readonly cognitoException: GetUserException
+  ) {
+    super(message, 'GetUserError', cognitoException);
   }
 }
