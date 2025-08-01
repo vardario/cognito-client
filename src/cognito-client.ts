@@ -25,7 +25,9 @@ import {
   VerifyUserAttributeException,
   COMMON_EXCEPTIONS,
   CommonError,
-  CommonException
+  CommonException,
+  VerifySoftwareTokenError,
+  VerifySoftwareTokenException
 } from './error.js';
 
 import {
@@ -601,6 +603,8 @@ export async function cognitoRequest(body: object, serviceTarget: ServiceTarget,
       throw new VerifyUserAttributeError(errorMessage, cognitoException as VerifyUserAttributeException);
     case ServiceTarget.GlobalSignOut:
       throw new GlobalSignOutError(errorMessage, cognitoException as GlobalSignOutException);
+    case ServiceTarget.VerifySoftwareToken:
+      throw new VerifySoftwareTokenError(errorMessage, cognitoException as VerifySoftwareTokenException);
   }
 }
 
