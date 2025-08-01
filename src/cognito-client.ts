@@ -361,7 +361,8 @@ export enum ServiceTarget {
   GetUser = 'GetUser',
   AssociateSoftwareToken = 'AssociateSoftwareToken',
   VerifySoftwareToken = 'VerifySoftwareToken',
-  ListDevices = 'ListDevices'
+  ListDevices = 'ListDevices',
+  SetUserMFAPreference = 'SetUserMFAPreference'
 }
 
 export interface AssociateSoftwareTokenRequest {
@@ -478,6 +479,22 @@ export interface GetUserResponse {
   PreferredMfaSetting: string;
 }
 
+export interface SetUserMFAPreferenceRequest {
+  AccessToken: string;
+  EmailMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
+  };
+  SMSMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
+  };
+  SoftwareTokenMfaSettings?: {
+    Enabled?: boolean;
+    PreferredMfa?: boolean;
+  };
+}
+
 export type InitiateAuthChallengeResponse =
   | InitiateAuthPasswordVerifierChallengeResponse
   | InitiateAuthSoftwareTokenMfaChallengeResponse;
@@ -504,6 +521,7 @@ type CognitoResponseMap = {
   [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareResponse;
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
   [ServiceTarget.ListDevices]: ListDevicesResponse;
+  [ServiceTarget.SetUserMFAPreference]: void;
 };
 
 type CognitoRequestMap = {
@@ -542,6 +560,7 @@ type CognitoRequestMap = {
   [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareTokenRequest;
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
   [ServiceTarget.ListDevices]: ListDevicesRequest;
+  [ServiceTarget.SetUserMFAPreference]: SetUserMFAPreferenceRequest;
 };
 
 export function adaptExpiresIn(auth: AuthenticationResult) {
@@ -753,7 +772,7 @@ export class CognitoClient {
    * @param password Password
    * @throws {InitAuthError}
    */
-  async authenticateUser(username: string, password: string): Promise<AuthenticationResult> {
+  async authenticateUser(username: string, password: string): Promise<InitiateAuthResponse> {
     const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: this.userPoolClientId,
@@ -766,20 +785,21 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = await cognitoRequest(
+    const initUserPasswordAuthResponse = await cognitoRequest(
       initiateAuthPayload,
       ServiceTarget.InitiateAuth,
       this.cognitoEndpoint
     );
 
-    if (!AuthenticationResult) {
-      throw new InitAuthError(
-        'Authentication failed, no authentication result returned',
-        InitiateAuthException.InternalErrorException
-      );
+    if (!initUserPasswordAuthResponse.AuthenticationResult) {
+      return initUserPasswordAuthResponse;
     }
 
-    return adaptExpiresIn(AuthenticationResult);
+    initUserPasswordAuthResponse.AuthenticationResult = adaptExpiresIn(
+      initUserPasswordAuthResponse.AuthenticationResult
+    );
+
+    return initUserPasswordAuthResponse;
   }
 
   /**
@@ -900,6 +920,17 @@ export class CognitoClient {
     return cognitoRequest(params, ServiceTarget.VerifySoftwareToken, this.cognitoEndpoint);
   }
 
+  /**
+   * Responds to an authentication challenge.
+   * @param params Request to respond to an authentication challenge.
+   * @param params.ChallengeName Name of the challenge to respond to.
+   * @param params.ChallengeResponses Responses to the challenge.
+   * @param params.Session Session identifier for the authentication process.
+   * @param params.ClientMetadata Optional metadata to pass to the service.
+   * @param params.AccessToken Access token of the current user.
+   * @param params.SecretHash Optional secret hash for the user pool client.
+   * @returns
+   */
   async respondToAuthChallenge(params: RespondToAuthChallengeRequest): Promise<InitiateAuthResponse> {
     return cognitoRequest(
       {
@@ -911,8 +942,30 @@ export class CognitoClient {
     );
   }
 
+  /**
+   * Lists the devices associated with the user.
+   * @param request Request to list devices.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.Limit Maximum number of devices to return.
+   * @param request.PaginationToken Pagination token to continue listing devices.
+   * @returns
+   */
   async listDevices(request: ListDevicesRequest): Promise<ListDevicesResponse> {
     return cognitoRequest(request, ServiceTarget.ListDevices, this.cognitoEndpoint);
+  }
+
+  /**
+   * 
+   * @param request Request to set user MFA preferences.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.EmailMfaSettings Optional settings for email MFA.
+   * @param request.SMSMfaSettings Optional settings for SMS MFA.
+   * @param request.SoftwareTokenMfaSettings Optional settings for software token MFA.
+   
+   * @returns 
+   */
+  async setUserMFAPreference(request: SetUserMFAPreferenceRequest): Promise<void> {
+    return cognitoRequest(request, ServiceTarget.SetUserMFAPreference, this.cognitoEndpoint);
   }
 
   /**

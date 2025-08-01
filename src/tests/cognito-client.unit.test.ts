@@ -103,8 +103,13 @@ describe('Cognito Client', () => {
     expect(cognitoClient.authenticateUser(user.email, newPassword)).rejects.toThrow();
 
     const auth = await cognitoClient.authenticateUser(user.email, user.password);
-    await cognitoClient.changePassword(user.password, newPassword, auth.AccessToken);
-    await cognitoClient.revokeToken(auth.RefreshToken);
+
+    if (auth.AuthenticationResult === undefined) {
+      throw new Error('Authentication result is undefined');
+    }
+
+    await cognitoClient.changePassword(user.password, newPassword, auth.AuthenticationResult.AccessToken);
+    await cognitoClient.revokeToken(auth.AuthenticationResult.RefreshToken);
     expect(cognitoClient.authenticateUser(user.email, user.password)).rejects.toThrow();
     await cognitoClient.authenticateUser(user.email, newPassword);
   });
