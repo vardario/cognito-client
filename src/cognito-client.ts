@@ -360,7 +360,8 @@ export enum ServiceTarget {
   GlobalSignOut = 'GlobalSignOut',
   GetUser = 'GetUser',
   AssociateSoftwareToken = 'AssociateSoftwareToken',
-  VerifySoftwareToken = 'VerifySoftwareToken'
+  VerifySoftwareToken = 'VerifySoftwareToken',
+  ListDevices = 'ListDevices'
 }
 
 export interface AssociateSoftwareTokenRequest {
@@ -381,6 +382,29 @@ export interface VerifySoftwareTokenRequest {
 export interface VerifySoftwareTokenResponse {
   Session: string;
   Status: 'SUCCESS' | 'ERROR';
+}
+
+export interface ListDevicesRequest {
+  AccessToken: string;
+  Limit: number;
+  PaginationToken?: 'string';
+}
+
+export interface Device {
+  DeviceAttributes: [
+    {
+      Name: string;
+      Value: string;
+    }
+  ];
+  DeviceCreateDate: number;
+  DeviceKey: string;
+  DeviceLastAuthenticatedDate: number;
+  DeviceLastModifiedDate: number;
+}
+export interface ListDevicesResponse {
+  Devices: Device[];
+  PaginationToken?: string;
 }
 
 /**
@@ -479,6 +503,7 @@ type CognitoResponseMap = {
   [ServiceTarget.GetUser]: GetUserResponse;
   [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareResponse;
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
+  [ServiceTarget.ListDevices]: ListDevicesResponse;
 };
 
 type CognitoRequestMap = {
@@ -516,6 +541,7 @@ type CognitoRequestMap = {
   };
   [ServiceTarget.AssociateSoftwareToken]: AssociateSoftwareTokenRequest;
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
+  [ServiceTarget.ListDevices]: ListDevicesRequest;
 };
 
 export function adaptExpiresIn(auth: AuthenticationResult) {
@@ -883,6 +909,10 @@ export class CognitoClient {
       ServiceTarget.RespondToAuthChallenge,
       this.cognitoEndpoint
     );
+  }
+
+  async listDevices(request: ListDevicesRequest): Promise<ListDevicesResponse> {
+    return cognitoRequest(request, ServiceTarget.ListDevices, this.cognitoEndpoint);
   }
 
   /**
