@@ -27,7 +27,15 @@ import {
   CommonError,
   CommonException,
   VerifySoftwareTokenError,
-  VerifySoftwareTokenException
+  VerifySoftwareTokenException,
+  AssociateSoftwareTokenError,
+  AssociateSoftwareTokenException,
+  SetUserMFAPreferenceError,
+  SetUserMFAPreferenceException,
+  ListDevicesException,
+  ListDevicesError,
+  GetUserException,
+  GetUserError
 } from './error.js';
 
 import {
@@ -648,8 +656,16 @@ export async function cognitoRequest(body: object, serviceTarget: ServiceTarget,
       throw new VerifyUserAttributeError(errorMessage, cognitoException as VerifyUserAttributeException);
     case ServiceTarget.GlobalSignOut:
       throw new GlobalSignOutError(errorMessage, cognitoException as GlobalSignOutException);
+    case ServiceTarget.AssociateSoftwareToken:
+      throw new AssociateSoftwareTokenError(errorMessage, cognitoException as AssociateSoftwareTokenException);
     case ServiceTarget.VerifySoftwareToken:
       throw new VerifySoftwareTokenError(errorMessage, cognitoException as VerifySoftwareTokenException);
+    case ServiceTarget.SetUserMFAPreference:
+      throw new SetUserMFAPreferenceError(errorMessage, cognitoException as SetUserMFAPreferenceException);
+    case ServiceTarget.ListDevices:
+      throw new ListDevicesError(errorMessage, cognitoException as ListDevicesException);
+    case ServiceTarget.GetUser:
+      throw new GetUserError(errorMessage, cognitoException as GetUserException);
   }
 }
 
