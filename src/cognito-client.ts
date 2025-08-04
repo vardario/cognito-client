@@ -370,7 +370,8 @@ export enum ServiceTarget {
   AssociateSoftwareToken = 'AssociateSoftwareToken',
   VerifySoftwareToken = 'VerifySoftwareToken',
   ListDevices = 'ListDevices',
-  SetUserMFAPreference = 'SetUserMFAPreference'
+  SetUserMFAPreference = 'SetUserMFAPreference',
+  StartWebAuthnRegistration = 'StartWebAuthnRegistration'
 }
 
 export interface AssociateSoftwareTokenRequest {
@@ -503,6 +504,14 @@ export interface SetUserMFAPreferenceRequest {
   };
 }
 
+export interface StartWebAuthnRegistrationRequest {
+  AccessToken: 'string';
+}
+
+export interface StartWebAuthnRegistrationResponse {
+  CredentialCreationOptions: PublicKeyCredentialCreationOptions;
+}
+
 export type InitiateAuthChallengeResponse =
   | InitiateAuthPasswordVerifierChallengeResponse
   | InitiateAuthSoftwareTokenMfaChallengeResponse;
@@ -530,6 +539,7 @@ type CognitoResponseMap = {
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
   [ServiceTarget.ListDevices]: ListDevicesResponse;
   [ServiceTarget.SetUserMFAPreference]: void;
+  [ServiceTarget.StartWebAuthnRegistration]: StartWebAuthnRegistrationResponse;
 };
 
 type CognitoRequestMap = {
@@ -569,6 +579,7 @@ type CognitoRequestMap = {
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
   [ServiceTarget.ListDevices]: ListDevicesRequest;
   [ServiceTarget.SetUserMFAPreference]: SetUserMFAPreferenceRequest;
+  [ServiceTarget.StartWebAuthnRegistration]: StartWebAuthnRegistrationRequest;
 };
 
 export function adaptExpiresIn(auth: AuthenticationResult) {
