@@ -39,8 +39,8 @@ export function uint8ArrayToBase64UrlString(bytes: Uint8Array | ArrayBuffer) {
   return base64String.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 
-export function base64ToUint8Array(base64: string) {
-  const binary = atob(base64);
+export function base64UrlToUint8Array(base64: string) {
+  const binary = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
   const len = binary.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) {
@@ -55,6 +55,7 @@ export function publicKeyCredentialToJSON(cred: any): any {
     clientExtensionResults: cred.getClientExtensionResults(),
     id: cred.id,
     rawId: uint8ArrayToBase64UrlString(cred.rawId),
+
     response: {
       attestationObject: uint8ArrayToBase64UrlString(cred.response.attestationObject),
       authenticatorData: uint8ArrayToBase64UrlString(cred.response.getAuthenticatorData()),

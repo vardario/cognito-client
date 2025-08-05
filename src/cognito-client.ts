@@ -39,7 +39,7 @@ import {
 } from './error.js';
 
 import {
-  base64ToUint8Array,
+  base64UrlToUint8Array,
   calculateSecretHash,
   calculateSignature,
   calculateU,
@@ -1197,11 +1197,20 @@ export class CognitoClient {
   ): Promise<StartWebAuthnRegistrationResponse> {
     const response = await cognitoRequest(request, ServiceTarget.StartWebAuthnRegistration, this.cognitoEndpoint);
 
-    response.CredentialCreationOptions.challenge = base64ToUint8Array(
+    response.CredentialCreationOptions.challenge = base64UrlToUint8Array(
       response.CredentialCreationOptions.challenge as any
     );
 
-    response.CredentialCreationOptions.user.id = base64ToUint8Array(response.CredentialCreationOptions.user.id as any);
+    response.CredentialCreationOptions.user.id = base64UrlToUint8Array(
+      response.CredentialCreationOptions.user.id as any
+    );
+
+    response.CredentialCreationOptions.excludeCredentials = (
+      response.CredentialCreationOptions.excludeCredentials || []
+    ).map((excludeCred: any) => ({
+      ...excludeCred,
+      id: base64UrlToUint8Array(excludeCred.id)
+    }));
 
     return response;
   }
