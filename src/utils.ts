@@ -25,8 +25,46 @@ export function uint8ArrayToHexString(bytes: Uint8Array) {
   return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
 }
 
-export function uint8ArrayToBase64String(bytes: Uint8Array) {
+export function uint8ArrayToBase64String(bytes: Uint8Array | ArrayBuffer) {
+  if (bytes instanceof ArrayBuffer) {
+    const byteArray = new Uint8Array(bytes);
+    return btoa(String.fromCharCode(...byteArray));
+  }
+
   return btoa(String.fromCharCode(...bytes));
+}
+
+export function uint8ArrayToBase64UrlString(bytes: Uint8Array | ArrayBuffer) {
+  const base64String = uint8ArrayToBase64String(bytes);
+  return base64String.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+
+export function base64ToUint8Array(base64: string) {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export function publicKeyCredentialToJSON(cred: any): any {
+  return {
+    authenticatorAttachment: cred.authenticatorAttachment,
+    clientExtensionResults: cred.getClientExtensionResults(),
+    id: cred.id,
+    rawId: uint8ArrayToBase64UrlString(cred.rawId),
+    response: {
+      attestationObject: uint8ArrayToBase64UrlString(cred.response.attestationObject),
+      authenticatorData: uint8ArrayToBase64UrlString(cred.response.getAuthenticatorData()),
+      clientDataJSON: uint8ArrayToBase64UrlString(cred.response.clientDataJSON),
+      publicKey: uint8ArrayToBase64UrlString(cred.response.getPublicKey()),
+      publicKeyAlgorithm: cred.response.getPublicKeyAlgorithm(),
+      transports: cred.response.getTransports()
+    },
+    type: cred.type
+  };
 }
 
 const N = BigInt(

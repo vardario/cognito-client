@@ -39,6 +39,7 @@ import {
 } from './error.js';
 
 import {
+  base64ToUint8Array,
   calculateSecretHash,
   calculateSignature,
   calculateU,
@@ -47,6 +48,7 @@ import {
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
+  publicKeyCredentialToJSON,
   randomBytes,
   uint8ArrayFromString,
   uint8ArrayToBase64String
@@ -99,11 +101,13 @@ export interface InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
   };
 }
 
+export type AuthChallenge = 'EMAIL_OTP' | 'SMS_OTP' | 'WEB_AUTHN' | 'PASSWORD ';
+
 export interface InitiateAuthUserAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_AUTH';
   AuthParameters: {
     USERNAME: string;
-    PREFERRED_CHALLENGE?: string;
+    PREFERRED_CHALLENGE?: AuthChallenge;
     SECRET_HASH?: string;
   };
 }
@@ -528,7 +532,7 @@ export interface StartWebAuthnRegistrationResponse {
 
 export interface CompleteWebAuthnRegistrationRequest {
   AccessToken: string;
-  Credential: Credential;
+  Credential: PublicKeyCredential;
 }
 
 export interface DeleteWebAuthnCredentialRequest {
@@ -627,7 +631,7 @@ type CognitoRequestMap = {
   [ServiceTarget.ListDevices]: ListDevicesRequest;
   [ServiceTarget.SetUserMFAPreference]: SetUserMFAPreferenceRequest;
   [ServiceTarget.StartWebAuthnRegistration]: StartWebAuthnRegistrationRequest;
-  [ServiceTarget.CompleteWebAuthnRegistration]: CompleteWebAuthnRegistrationRequest;
+  [ServiceTarget.CompleteWebAuthnRegistration]: any;
   [ServiceTarget.DeleteWebAuthnCredential]: DeleteWebAuthnCredentialRequest;
   [ServiceTarget.ListWebAuthnCredentials]: ListWebAuthnCredentialsRequest;
 };
@@ -880,6 +884,19 @@ export class CognitoClient {
     }
 
     return initUserPasswordAuthResponse;
+  }
+
+  async authenticateWebAuthn(username: string) {
+    const webAuthnPayload: InitiateAuthRequest = {
+      AuthFlow: 'USER_AUTH',
+      ClientId: this.userPoolClientId,
+      AuthParameters: {
+        USERNAME: username,
+        PREFERRED_CHALLENGE: 'WEB_AUTHN'
+      }
+    };
+
+    return this.initiateAuth(webAuthnPayload);
   }
 
   /**
@@ -1180,13 +1197,11 @@ export class CognitoClient {
   ): Promise<StartWebAuthnRegistrationResponse> {
     const response = await cognitoRequest(request, ServiceTarget.StartWebAuthnRegistration, this.cognitoEndpoint);
 
-    response.CredentialCreationOptions.challenge = uint8ArrayFromString(
+    response.CredentialCreationOptions.challenge = base64ToUint8Array(
       response.CredentialCreationOptions.challenge as any
     );
 
-    response.CredentialCreationOptions.user.id = uint8ArrayFromString(
-      response.CredentialCreationOptions.user.id as any
-    );
+    response.CredentialCreationOptions.user.id = base64ToUint8Array(response.CredentialCreationOptions.user.id as any);
 
     return response;
   }
@@ -1198,7 +1213,14 @@ export class CognitoClient {
    * @param request.Credential The credential object returned by the WebAuthn API.
    */
   async completeWebAuthnRegistration(request: CompleteWebAuthnRegistrationRequest): Promise<void> {
-    await cognitoRequest(request, ServiceTarget.CompleteWebAuthnRegistration, this.cognitoEndpoint);
+    await cognitoRequest(
+      {
+        AccessToken: request.AccessToken,
+        Credential: publicKeyCredentialToJSON(request.Credential)
+      },
+      ServiceTarget.CompleteWebAuthnRegistration,
+      this.cognitoEndpoint
+    );
   }
 
   /**
