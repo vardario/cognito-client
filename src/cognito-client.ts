@@ -576,7 +576,7 @@ export interface StartWebAuthnRegistrationRequest {
 }
 
 export interface StartWebAuthnRegistrationResponse {
-  CredentialCreationOptions: PublicKeyCredentialCreationOptions;
+  CredentialCreationOptions: any;
 }
 
 export interface CompleteWebAuthnRegistrationRequest {
@@ -1008,13 +1008,9 @@ export class CognitoClient {
    * @param accessToken Access token of the current user.
    */
   async registerWebAuthnDevice(accessToken: string) {
-    const { CredentialCreationOptions } = await cognitoRequest(
-      {
-        AccessToken: accessToken
-      },
-      ServiceTarget.StartWebAuthnRegistration,
-      this.cognitoEndpoint
-    );
+    const { CredentialCreationOptions } = await this.startWebAuthnRegistration({
+      AccessToken: accessToken
+    });
 
     const credentials = await navigator.credentials.create({
       publicKey: CredentialCreationOptions

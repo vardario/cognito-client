@@ -59,7 +59,6 @@ export function publicKeyCredentialToJSON(cred: any): any {
     clientExtensionResults: cred.getClientExtensionResults(),
     id: cred.id,
     rawId: uint8ArrayToBase64UrlString(cred.rawId),
-
     response: {
       attestationObject: uint8ArrayToBase64UrlString(cred.response.attestationObject),
       authenticatorData: cred.response.authenticatorData
