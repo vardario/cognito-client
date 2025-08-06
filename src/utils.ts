@@ -34,7 +34,11 @@ export function uint8ArrayToBase64String(bytes: Uint8Array | ArrayBuffer) {
   return btoa(String.fromCharCode(...bytes));
 }
 
-export function uint8ArrayToBase64UrlString(bytes: Uint8Array | ArrayBuffer) {
+export function uint8ArrayToBase64UrlString(bytes: Uint8Array | ArrayBuffer | undefined) {
+  if (bytes === undefined) {
+    return undefined;
+  }
+
   const base64String = uint8ArrayToBase64String(bytes);
   return base64String.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
@@ -50,7 +54,7 @@ export function base64UrlToUint8Array(base64: string) {
 }
 
 export function publicKeyCredentialToJSON(cred: any): any {
-  return {
+  return removeUndefined({
     authenticatorAttachment: cred.authenticatorAttachment,
     clientExtensionResults: cred.getClientExtensionResults(),
     id: cred.id,
@@ -58,14 +62,18 @@ export function publicKeyCredentialToJSON(cred: any): any {
 
     response: {
       attestationObject: uint8ArrayToBase64UrlString(cred.response.attestationObject),
-      authenticatorData: uint8ArrayToBase64UrlString(cred.response.getAuthenticatorData()),
+      authenticatorData: cred.response.authenticatorData
+        ? uint8ArrayToBase64UrlString(cred.response.authenticatorData)
+        : undefined,
       clientDataJSON: uint8ArrayToBase64UrlString(cred.response.clientDataJSON),
-      publicKey: uint8ArrayToBase64UrlString(cred.response.getPublicKey()),
-      publicKeyAlgorithm: cred.response.getPublicKeyAlgorithm(),
-      transports: cred.response.getTransports()
+      publicKey: cred.response.getPublicKey ? uint8ArrayToBase64UrlString(cred.response.getPublicKey()) : undefined,
+      publicKeyAlgorithm: cred.response.getPublicKeyAlgorithm ? cred.response.getPublicKeyAlgorithm() : undefined,
+      transports: cred.response.getTransports ? cred.response.getTransports() : undefined,
+      signature: cred.response.signature ? uint8ArrayToBase64UrlString(cred.response.signature) : undefined,
+      userHandle: cred.response.userHandle ? uint8ArrayToBase64UrlString(cred.response.userHandle) : undefined
     },
     type: cred.type
-  };
+  });
 }
 
 const N = BigInt(
@@ -249,4 +257,25 @@ export async function hmac(algorithm: AlgorithmIdentifier, key: Uint8Array, data
   );
   const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
   return new Uint8Array(signature);
+}
+
+export function removeUndefined(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item)).filter(item => item !== undefined);
+  }
+
+  if (obj !== null && typeof obj === 'object') {
+    return Object.entries(obj).reduce(
+      (acc, [key, value]) => {
+        const cleaned = removeUndefined(value);
+        if (cleaned !== undefined) {
+          acc[key] = cleaned;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+  }
+
+  return obj !== undefined ? obj : undefined;
 }

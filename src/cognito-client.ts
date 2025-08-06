@@ -199,6 +199,7 @@ export interface _RespondToAuthChallengeMfaSetupRequest extends RespondToAuthCha
     SOFTWARE_TOKEN_MFA_CODE?: string;
     SECRET_HASH?: string;
   };
+  Session?: never;
 }
 
 export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
@@ -206,6 +207,15 @@ export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAu
   ChallengeResponses: {
     USERNAME: string;
     SOFTWARE_TOKEN_MFA_CODE?: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface _RespondToAuthChallengeWebAuthnRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'WEB_AUTHN';
+  ChallengeResponses: {
+    USERNAME: string;
+    CREDENTIAL: any; // PublicKeyCredentialJSON
     SECRET_HASH?: string;
   };
 }
@@ -219,7 +229,8 @@ type _RespondToAuthChallengeRequest =
   | _RespondToAuthChallengeDeviceSrpAuthRequest
   | _RespondToAuthChallengeDevicePasswordVerifierRequest
   | _RespondToAuthChallengeMfaSetupRequest
-  | _RespondToAuthChallengeSelectMfaTypeRequest;
+  | _RespondToAuthChallengeSelectMfaTypeRequest
+  | _RespondToAuthChallengeWebAuthnRequest;
 
 export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengePasswordVerifierRequest, 'ClientId'>
@@ -230,7 +241,8 @@ export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengeDeviceSrpAuthRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeDevicePasswordVerifierRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeMfaSetupRequest, 'ClientId'>
-  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>;
+  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeWebAuthnRequest, 'ClientId'>;
 
 export interface UserAttribute {
   Name: string;
@@ -485,7 +497,17 @@ export interface InitiateAuthSoftwareTokenMfaChallengeResponse {
   Session: string;
 }
 
+export interface InitiateAuthWebAuthResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'WEB_AUTHN';
+  Session: string;
+  ChallengeParameters: {
+    CREDENTIAL_REQUEST_OPTIONS: string;
+  };
+}
+
 export interface InitiateEmailOtpChallengeResponse {
+  AuthenticationResult?: never;
   ChallengeName: 'EMAIL_OTP';
   ChallengeParameters: {
     CODE_DELIVERY_DELIVERY_MEDIUM: string;
@@ -562,7 +584,9 @@ export interface ListWebAuthnCredentialsResponse {
 
 export type InitiateAuthChallengeResponse =
   | InitiateAuthPasswordVerifierChallengeResponse
-  | InitiateAuthSoftwareTokenMfaChallengeResponse;
+  | InitiateAuthSoftwareTokenMfaChallengeResponse
+  | InitiateAuthWebAuthResponse
+  | InitiateEmailOtpChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
@@ -896,7 +920,45 @@ export class CognitoClient {
       }
     };
 
-    return this.initiateAuth(webAuthnPayload);
+    const authResponse = await this.initiateAuth(webAuthnPayload);
+
+    if (authResponse.ChallengeName !== 'WEB_AUTHN') {
+      throw new InitAuthError(
+        'Authentication failed, expected WEB_AUTHN challenge but received: ' + authResponse.ChallengeName,
+        InitiateAuthException.InternalErrorException
+      );
+    }
+
+    const credentialRequestOptions = JSON.parse(authResponse.ChallengeParameters.CREDENTIAL_REQUEST_OPTIONS);
+
+    credentialRequestOptions.challenge = base64UrlToUint8Array(credentialRequestOptions.challenge);
+    credentialRequestOptions.allowCredentials = (credentialRequestOptions.allowCredentials || []).map(
+      (allowCred: any) => ({
+        ...allowCred,
+        id: base64UrlToUint8Array(allowCred.id)
+      })
+    );
+
+    const credentials = await navigator.credentials.get({
+      publicKey: credentialRequestOptions
+    });
+
+    const challengeResponse = await this.respondToAuthChallenge({
+      ChallengeName: 'WEB_AUTHN',
+      ChallengeResponses: {
+        USERNAME: username,
+        CREDENTIAL: JSON.stringify(publicKeyCredentialToJSON(credentials)),
+        SECRET_HASH:
+          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+      },
+      Session: authResponse.Session
+    });
+
+    if (challengeResponse.AuthenticationResult) {
+      challengeResponse.AuthenticationResult = adaptExpiresIn(challengeResponse.AuthenticationResult);
+    }
+
+    return challengeResponse;
   }
 
   /**
