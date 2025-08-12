@@ -543,6 +543,13 @@ export interface InitAuthPasswordSRPChallengeResponse extends InitiateAuthBaseRe
   ChallengeParameters: never;
 }
 
+export interface InitAuthMfaSetupChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'MFA_SETUP';
+  ChallengeParameters: never;
+  MFAS_CAN_SETUP: ('SMS_MFA' | 'SOFTWARE_TOKEN_MFA')[];
+}
+
 export interface MfaOption {
   DeliveryMedium: 'SMS' | 'EMAIL';
   AttributeName: string;
@@ -616,7 +623,8 @@ export type InitiateAuthChallengeResponse =
   | InitiateEmailOtpChallengeResponse
   | InitAuthSelectChallengeResponse
   | InitAuthPasswordChallengeResponse
-  | InitAuthPasswordSRPChallengeResponse;
+  | InitAuthPasswordSRPChallengeResponse
+  | InitAuthMfaSetupChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
