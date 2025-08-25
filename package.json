@@ -41,7 +41,7 @@
     "prettier": "^3.1.0",
     "prettier-package-json": "^2.8.0",
     "semantic-release": "^24.2.7",
-    "testcontainers": "^10.2.2",
+    "testcontainers": "^11.5.1",
     "tsx": "^4.7.1",
     "typescript": "^5.2.2",
     "vitest": "^0.34.6",
