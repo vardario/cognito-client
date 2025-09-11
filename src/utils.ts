@@ -25,8 +25,54 @@ export function uint8ArrayToHexString(bytes: Uint8Array) {
   return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
 }
 
-export function uint8ArrayToBase64String(bytes: Uint8Array) {
+export function uint8ArrayToBase64String(bytes: Uint8Array | ArrayBuffer) {
+  if (bytes instanceof ArrayBuffer) {
+    const byteArray = new Uint8Array(bytes);
+    return btoa(String.fromCharCode(...byteArray));
+  }
+
   return btoa(String.fromCharCode(...bytes));
+}
+
+export function uint8ArrayToBase64UrlString(bytes: Uint8Array | ArrayBuffer | undefined) {
+  if (bytes === undefined) {
+    return undefined;
+  }
+
+  const base64String = uint8ArrayToBase64String(bytes);
+  return base64String.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+
+export function base64UrlToUint8Array(base64: string) {
+  const binary = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export function publicKeyCredentialToJSON(cred: any): any {
+  return removeUndefined({
+    authenticatorAttachment: cred.authenticatorAttachment,
+    clientExtensionResults: cred.getClientExtensionResults(),
+    id: cred.id,
+    rawId: uint8ArrayToBase64UrlString(cred.rawId),
+    response: {
+      attestationObject: uint8ArrayToBase64UrlString(cred.response.attestationObject),
+      authenticatorData: cred.response.authenticatorData
+        ? uint8ArrayToBase64UrlString(cred.response.authenticatorData)
+        : undefined,
+      clientDataJSON: uint8ArrayToBase64UrlString(cred.response.clientDataJSON),
+      publicKey: cred.response.getPublicKey ? uint8ArrayToBase64UrlString(cred.response.getPublicKey()) : undefined,
+      publicKeyAlgorithm: cred.response.getPublicKeyAlgorithm ? cred.response.getPublicKeyAlgorithm() : undefined,
+      transports: cred.response.getTransports ? cred.response.getTransports() : undefined,
+      signature: cred.response.signature ? uint8ArrayToBase64UrlString(cred.response.signature) : undefined,
+      userHandle: cred.response.userHandle ? uint8ArrayToBase64UrlString(cred.response.userHandle) : undefined
+    },
+    type: cred.type
+  });
 }
 
 const N = BigInt(
@@ -210,4 +256,25 @@ export async function hmac(algorithm: AlgorithmIdentifier, key: Uint8Array, data
   );
   const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
   return new Uint8Array(signature);
+}
+
+export function removeUndefined(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item)).filter(item => item !== undefined);
+  }
+
+  if (obj !== null && typeof obj === 'object') {
+    return Object.entries(obj).reduce(
+      (acc, [key, value]) => {
+        const cleaned = removeUndefined(value);
+        if (cleaned !== undefined) {
+          acc[key] = cleaned;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+  }
+
+  return obj !== undefined ? obj : undefined;
 }

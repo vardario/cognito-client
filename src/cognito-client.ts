@@ -39,6 +39,7 @@ import {
 } from './error.js';
 
 import {
+  base64UrlToUint8Array,
   calculateSecretHash,
   calculateSignature,
   calculateU,
@@ -47,6 +48,7 @@ import {
   generateA,
   generateSmallA,
   getPasswordAuthenticationKey,
+  publicKeyCredentialToJSON,
   randomBytes,
   uint8ArrayFromString,
   uint8ArrayToBase64String
@@ -64,7 +66,7 @@ export interface CognitoBaseRequest {
   };
 }
 
-export interface InitiateAuthUserSrpAuthRequest extends CognitoBaseRequest {
+export interface _InitiateAuthUserSrpAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_SRP_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -73,7 +75,7 @@ export interface InitiateAuthUserSrpAuthRequest extends CognitoBaseRequest {
   };
 }
 
-export interface InitiateAuthUserPasswordAuthRequest extends CognitoBaseRequest {
+export interface _InitiateAuthUserPasswordAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'USER_PASSWORD_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -82,15 +84,16 @@ export interface InitiateAuthUserPasswordAuthRequest extends CognitoBaseRequest 
   };
 }
 
-export interface InitiateAuthRefreshTokenAuthRequest extends CognitoBaseRequest {
+export interface _InitiateAuthRefreshTokenAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'REFRESH_TOKEN_AUTH';
   AuthParameters: {
     REFRESH_TOKEN: string;
     SECRET_HASH?: string;
+    USERNAME?: never;
   };
 }
 
-export interface InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
+export interface _InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
   AuthFlow: 'CUSTOM_AUTH';
   AuthParameters: {
     USERNAME: string;
@@ -98,11 +101,28 @@ export interface InitiateAuthCustomAuthRequest extends CognitoBaseRequest {
   };
 }
 
+export interface _InitiateAuthUserAuthRequest extends CognitoBaseRequest {
+  AuthFlow: 'USER_AUTH';
+  AuthParameters: {
+    USERNAME: string;
+    PREFERRED_CHALLENGE?: AuthChallenge;
+    SECRET_HASH?: string;
+  };
+}
+
+type _InitiateAuthRequest =
+  | _InitiateAuthUserSrpAuthRequest
+  | _InitiateAuthUserPasswordAuthRequest
+  | _InitiateAuthRefreshTokenAuthRequest
+  | _InitiateAuthCustomAuthRequest
+  | _InitiateAuthUserAuthRequest;
+
 export type InitiateAuthRequest =
-  | InitiateAuthUserSrpAuthRequest
-  | InitiateAuthRefreshTokenAuthRequest
-  | InitiateAuthCustomAuthRequest
-  | InitiateAuthUserPasswordAuthRequest;
+  | Omit<_InitiateAuthUserSrpAuthRequest, 'ClientId'>
+  | Omit<_InitiateAuthUserPasswordAuthRequest, 'ClientId'>
+  | Omit<_InitiateAuthRefreshTokenAuthRequest, 'ClientId'>
+  | Omit<_InitiateAuthCustomAuthRequest, 'ClientId'>
+  | Omit<_InitiateAuthUserAuthRequest, 'ClientId'>;
 
 export interface RespondToAuthChallengeBaseRequest extends CognitoBaseRequest {
   Session?: string;
@@ -184,6 +204,7 @@ export interface _RespondToAuthChallengeMfaSetupRequest extends RespondToAuthCha
     SOFTWARE_TOKEN_MFA_CODE?: string;
     SECRET_HASH?: string;
   };
+  Session?: never;
 }
 
 export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAuthChallengeBaseRequest {
@@ -191,6 +212,15 @@ export interface _RespondToAuthChallengeSelectMfaTypeRequest extends RespondToAu
   ChallengeResponses: {
     USERNAME: string;
     SOFTWARE_TOKEN_MFA_CODE?: string;
+    SECRET_HASH?: string;
+  };
+}
+
+export interface _RespondToAuthChallengeWebAuthnRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'WEB_AUTHN';
+  ChallengeResponses: {
+    USERNAME: string;
+    CREDENTIAL: any; // PublicKeyCredentialJSON
     SECRET_HASH?: string;
   };
 }
@@ -204,7 +234,8 @@ type _RespondToAuthChallengeRequest =
   | _RespondToAuthChallengeDeviceSrpAuthRequest
   | _RespondToAuthChallengeDevicePasswordVerifierRequest
   | _RespondToAuthChallengeMfaSetupRequest
-  | _RespondToAuthChallengeSelectMfaTypeRequest;
+  | _RespondToAuthChallengeSelectMfaTypeRequest
+  | _RespondToAuthChallengeWebAuthnRequest;
 
 export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengePasswordVerifierRequest, 'ClientId'>
@@ -215,7 +246,8 @@ export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengeDeviceSrpAuthRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeDevicePasswordVerifierRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeMfaSetupRequest, 'ClientId'>
-  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>;
+  | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeWebAuthnRequest, 'ClientId'>;
 
 export interface UserAttribute {
   Name: string;
@@ -370,7 +402,11 @@ export enum ServiceTarget {
   AssociateSoftwareToken = 'AssociateSoftwareToken',
   VerifySoftwareToken = 'VerifySoftwareToken',
   ListDevices = 'ListDevices',
-  SetUserMFAPreference = 'SetUserMFAPreference'
+  SetUserMFAPreference = 'SetUserMFAPreference',
+  StartWebAuthnRegistration = 'StartWebAuthnRegistration',
+  CompleteWebAuthnRegistration = 'CompleteWebAuthnRegistration',
+  DeleteWebAuthnCredential = 'DeleteWebAuthnCredential',
+  ListWebAuthnCredentials = 'ListWebAuthnCredentials'
 }
 
 export interface AssociateSoftwareTokenRequest {
@@ -441,13 +477,19 @@ export interface NewDeviceMetadata {
   DeviceGroupKey?: string;
 }
 
-export interface InitiateAuthAuthenticationResponse {
-  AuthenticationResult: AuthenticationResult;
-  ChallengeName?: never;
-  session?: never;
+export type AuthChallenge = InitiateAuthChallengeResponse['ChallengeName'];
+
+export interface InitiateAuthBaseResponse {
+  AvailableChallenges: [];
+  Session: string;
 }
 
-export interface InitiateAuthPasswordVerifierChallengeResponse {
+export interface InitiateAuthAuthenticationResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult: AuthenticationResult;
+  ChallengeName?: never;
+}
+
+export interface InitiateAuthPasswordVerifierChallengeResponse extends InitiateAuthBaseResponse {
   AuthenticationResult?: never;
   ChallengeName: 'PASSWORD_VERIFIER';
   ChallengeParameters: {
@@ -457,22 +499,55 @@ export interface InitiateAuthPasswordVerifierChallengeResponse {
     USERNAME: string;
     USER_ID_FOR_SRP: string;
   };
-  session?: never;
 }
 
-export interface InitiateAuthSoftwareTokenMfaChallengeResponse {
+export interface InitiateAuthSoftwareTokenMfaChallengeResponse extends InitiateAuthBaseResponse {
   AuthenticationResult?: never;
   ChallengeName: 'SOFTWARE_TOKEN_MFA';
-  Session: string;
 }
 
-export interface InitiateEmailOtpChallengeResponse {
+export interface InitiateAuthWebAuthResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'WEB_AUTHN';
+  Session: string;
+  ChallengeParameters: {
+    CREDENTIAL_REQUEST_OPTIONS: string;
+  };
+}
+
+export interface InitiateEmailOtpChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
   ChallengeName: 'EMAIL_OTP';
   ChallengeParameters: {
     CODE_DELIVERY_DELIVERY_MEDIUM: string;
     CODE_DELIVERY_DESTINATION: string;
   };
-  session: string;
+  Session: string;
+}
+
+export interface InitAuthSelectChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'SELECT_CHALLENGE';
+  ChallengeParameters: never;
+}
+
+export interface InitAuthPasswordChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'PASSWORD';
+  ChallengeParameters: never;
+}
+
+export interface InitAuthPasswordSRPChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'PASSWORD_SRP';
+  ChallengeParameters: never;
+}
+
+export interface InitAuthMfaSetupChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'MFA_SETUP';
+  ChallengeParameters: never;
+  MFAS_CAN_SETUP: ('SMS_MFA' | 'SOFTWARE_TOKEN_MFA')[];
 }
 
 export interface MfaOption {
@@ -503,9 +578,53 @@ export interface SetUserMFAPreferenceRequest {
   };
 }
 
+export interface StartWebAuthnRegistrationRequest {
+  AccessToken: string;
+}
+
+export interface StartWebAuthnRegistrationResponse {
+  CredentialCreationOptions: any;
+}
+
+export interface CompleteWebAuthnRegistrationRequest {
+  AccessToken: string;
+  Credential: PublicKeyCredential;
+}
+
+export interface DeleteWebAuthnCredentialRequest {
+  AccessToken: string;
+  CredentialId: string;
+}
+
+export interface ListWebAuthnCredentialsRequest {
+  AccessToken: string;
+  MaxResults?: number;
+  NextToken?: string;
+}
+
+export interface WebAuthnCredential {
+  AuthenticatorTransports: string[];
+  CreatedAt: string;
+  CredentialId: string;
+  FriendlyCredentialName: string;
+  RelyingPartyId: string;
+  AuthenticatorAttachment?: string;
+}
+
+export interface ListWebAuthnCredentialsResponse {
+  Credentials: WebAuthnCredential[];
+  NextToken?: string;
+}
+
 export type InitiateAuthChallengeResponse =
   | InitiateAuthPasswordVerifierChallengeResponse
-  | InitiateAuthSoftwareTokenMfaChallengeResponse;
+  | InitiateAuthSoftwareTokenMfaChallengeResponse
+  | InitiateAuthWebAuthResponse
+  | InitiateEmailOtpChallengeResponse
+  | InitAuthSelectChallengeResponse
+  | InitAuthPasswordChallengeResponse
+  | InitAuthPasswordSRPChallengeResponse
+  | InitAuthMfaSetupChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
@@ -530,10 +649,14 @@ type CognitoResponseMap = {
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenResponse;
   [ServiceTarget.ListDevices]: ListDevicesResponse;
   [ServiceTarget.SetUserMFAPreference]: void;
+  [ServiceTarget.StartWebAuthnRegistration]: StartWebAuthnRegistrationResponse;
+  [ServiceTarget.CompleteWebAuthnRegistration]: void;
+  [ServiceTarget.DeleteWebAuthnCredential]: void;
+  [ServiceTarget.ListWebAuthnCredentials]: ListWebAuthnCredentialsResponse;
 };
 
 type CognitoRequestMap = {
-  [ServiceTarget.InitiateAuth]: InitiateAuthRequest;
+  [ServiceTarget.InitiateAuth]: _InitiateAuthRequest;
   [ServiceTarget.RespondToAuthChallenge]: _RespondToAuthChallengeRequest;
   [ServiceTarget.SignUp]: SignUpRequest;
   [ServiceTarget.ConfirmSignUp]: ConfirmSignUpRequest;
@@ -569,6 +692,10 @@ type CognitoRequestMap = {
   [ServiceTarget.VerifySoftwareToken]: VerifySoftwareTokenRequest;
   [ServiceTarget.ListDevices]: ListDevicesRequest;
   [ServiceTarget.SetUserMFAPreference]: SetUserMFAPreferenceRequest;
+  [ServiceTarget.StartWebAuthnRegistration]: StartWebAuthnRegistrationRequest;
+  [ServiceTarget.CompleteWebAuthnRegistration]: any;
+  [ServiceTarget.DeleteWebAuthnCredential]: DeleteWebAuthnCredentialRequest;
+  [ServiceTarget.ListWebAuthnCredentials]: ListWebAuthnCredentialsRequest;
 };
 
 export function adaptExpiresIn(auth: AuthenticationResult) {
@@ -697,6 +824,28 @@ export class CognitoClient {
     };
   }
 
+  async initiateAuth(request: InitiateAuthRequest): Promise<InitiateAuthResponse> {
+    request.AuthParameters.SECRET_HASH =
+      this.clientSecret && request.AuthParameters.USERNAME
+        ? await calculateSecretHash(this.clientSecret, this.userPoolClientId, request.AuthParameters.USERNAME)
+        : undefined;
+
+    const cognitoResponse = await cognitoRequest(
+      {
+        ...request,
+        ClientId: this.userPoolClientId
+      },
+      ServiceTarget.InitiateAuth,
+      this.cognitoEndpoint
+    );
+
+    if (cognitoResponse.AuthenticationResult) {
+      cognitoResponse.AuthenticationResult = adaptExpiresIn(cognitoResponse.AuthenticationResult);
+    }
+
+    return cognitoResponse;
+  }
+
   /**
    *
    * Performs user authentication with username and password through ALLOW_USER_SRP_AUTH .
@@ -711,21 +860,16 @@ export class CognitoClient {
     const smallA = await generateSmallA();
     const A = generateA(smallA);
 
-    const initUserSrpAuthResponse = await cognitoRequest(
-      {
-        AuthFlow: 'USER_SRP_AUTH',
-        ClientId: this.userPoolClientId,
-        AuthParameters: {
-          USERNAME: username,
-          SRP_A: A.toString(16),
-          SECRET_HASH:
-            this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
-        },
-        ClientMetadata: {}
+    const initUserSrpAuthResponse = await this.initiateAuth({
+      AuthFlow: 'USER_SRP_AUTH',
+      AuthParameters: {
+        USERNAME: username,
+        SRP_A: A.toString(16),
+        SECRET_HASH:
+          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
       },
-      ServiceTarget.InitiateAuth,
-      this.cognitoEndpoint
-    );
+      ClientMetadata: {}
+    });
 
     if (initUserSrpAuthResponse.ChallengeName !== 'PASSWORD_VERIFIER') {
       return initUserSrpAuthResponse;
@@ -791,7 +935,7 @@ export class CognitoClient {
   async authenticateUser(username: string, password: string): Promise<InitiateAuthResponse> {
     const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: this.userPoolClientId,
+
       AuthParameters: {
         USERNAME: username,
         PASSWORD: password,
@@ -801,21 +945,93 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const initUserPasswordAuthResponse = await cognitoRequest(
-      initiateAuthPayload,
-      ServiceTarget.InitiateAuth,
-      this.cognitoEndpoint
-    );
+    const initUserPasswordAuthResponse = await this.initiateAuth(initiateAuthPayload);
 
     if (!initUserPasswordAuthResponse.AuthenticationResult) {
       return initUserPasswordAuthResponse;
     }
 
-    initUserPasswordAuthResponse.AuthenticationResult = adaptExpiresIn(
-      initUserPasswordAuthResponse.AuthenticationResult
+    return initUserPasswordAuthResponse;
+  }
+
+  /**
+   * Initiates the authentication process for a user using a preferred challenge, such as WEB_AUTHN.
+   */
+  async authenticateWebAuthn(username: string) {
+    const webAuthnPayload: InitiateAuthRequest = {
+      AuthFlow: 'USER_AUTH',
+      AuthParameters: {
+        USERNAME: username,
+        PREFERRED_CHALLENGE: 'WEB_AUTHN'
+      }
+    };
+
+    const authResponse = await this.initiateAuth(webAuthnPayload);
+
+    if (authResponse.ChallengeName !== 'WEB_AUTHN') {
+      throw new InitAuthError(
+        'Authentication failed, expected WEB_AUTHN challenge but received: ' + authResponse.ChallengeName,
+        InitiateAuthException.InternalErrorException
+      );
+    }
+
+    const credentialRequestOptions = JSON.parse(authResponse.ChallengeParameters.CREDENTIAL_REQUEST_OPTIONS);
+
+    credentialRequestOptions.challenge = base64UrlToUint8Array(credentialRequestOptions.challenge);
+    credentialRequestOptions.allowCredentials = (credentialRequestOptions.allowCredentials || []).map(
+      (allowCred: any) => ({
+        ...allowCred,
+        id: base64UrlToUint8Array(allowCred.id)
+      })
     );
 
-    return initUserPasswordAuthResponse;
+    const credentials = await navigator.credentials.get({
+      publicKey: credentialRequestOptions
+    });
+
+    const challengeResponse = await this.respondToAuthChallenge({
+      ChallengeName: 'WEB_AUTHN',
+      ChallengeResponses: {
+        USERNAME: username,
+        CREDENTIAL: JSON.stringify(publicKeyCredentialToJSON(credentials)),
+        SECRET_HASH:
+          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+      },
+      Session: authResponse.Session
+    });
+
+    if (challengeResponse.AuthenticationResult) {
+      challengeResponse.AuthenticationResult = adaptExpiresIn(challengeResponse.AuthenticationResult);
+    }
+
+    return challengeResponse;
+  }
+
+  /**
+   * Registers a new WebAuthn device for the current user.
+   * This method initiates the WebAuthn registration process by requesting the necessary options from Cognito,
+   * then creates a new public key credential using the WebAuthn API, and finally
+   * completes the registration by sending the credential back to Cognito.
+   *
+   * @param accessToken Access token of the current user.
+   */
+  async registerWebAuthnDevice(accessToken: string) {
+    const { CredentialCreationOptions } = await this.startWebAuthnRegistration({
+      AccessToken: accessToken
+    });
+
+    const credentials = await navigator.credentials.create({
+      publicKey: CredentialCreationOptions
+    });
+
+    if (!(credentials instanceof PublicKeyCredential)) {
+      throw new Error('Invalid credentials returned from WebAuthn API');
+    }
+
+    await this.completeWebAuthnRegistration({
+      AccessToken: accessToken,
+      Credential: credentials
+    });
   }
 
   /**
@@ -829,7 +1045,6 @@ export class CognitoClient {
   public async refreshSession(refreshToken: string, username?: string): Promise<AuthenticationResult> {
     const refreshTokenPayload: InitiateAuthRequest = {
       AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: this.userPoolClientId,
       AuthParameters: {
         REFRESH_TOKEN: refreshToken,
         SECRET_HASH:
@@ -840,11 +1055,7 @@ export class CognitoClient {
       ClientMetadata: {}
     };
 
-    const { AuthenticationResult } = await cognitoRequest(
-      refreshTokenPayload,
-      ServiceTarget.InitiateAuth,
-      this.cognitoEndpoint
-    );
+    const { AuthenticationResult } = await this.initiateAuth(refreshTokenPayload);
 
     if (!AuthenticationResult) {
       throw new InitAuthError(
@@ -857,7 +1068,7 @@ export class CognitoClient {
       AuthenticationResult.RefreshToken = refreshToken;
     }
 
-    return adaptExpiresIn(AuthenticationResult);
+    return AuthenticationResult;
   }
 
   /**
@@ -920,6 +1131,11 @@ export class CognitoClient {
     await cognitoRequest(changePasswordPayload, ServiceTarget.ChangePassword, this.cognitoEndpoint);
   }
 
+  /**
+   * Gets the user information.
+   * @param accessToken Access token of the current user.
+   * @returns User information.
+   */
   async getUser(accessToken: string): Promise<GetUserResponse> {
     const getUserPayload = {
       AccessToken: accessToken
@@ -928,10 +1144,30 @@ export class CognitoClient {
     return cognitoRequest(getUserPayload, ServiceTarget.GetUser, this.cognitoEndpoint);
   }
 
+  /**
+   * Associates a software token with the user.
+   * @param params Request to associate a software token with the user.
+   * @param params.AccessToken Access token of the current user.
+   * @param params.Session Optional session identifier for the authentication process.
+   * @param params.ClientMetadata Optional metadata to pass to the service.
+   * @param params.UserContextData Optional user context data.
+   * @param params.AnalyticsMetadata Optional analytics metadata.
+   * @param params.FriendlyDeviceName Optional friendly name for the device.
+   * @returns
+   */
   async associateSoftwareToken(params: AssociateSoftwareTokenRequest): Promise<AssociateSoftwareResponse> {
     return cognitoRequest(params, ServiceTarget.AssociateSoftwareToken, this.cognitoEndpoint);
   }
 
+  /**
+   * Verifies a software token.
+   * @param params Request to verify a software token.
+   * @param params.AccessToken Access token of the current user.
+   * @param params.FriendlyDeviceName Optional friendly name for the device.
+   * @param params.Session Optional session identifier for the authentication process.
+   * @param params.UserCode The user code to verify.
+   * @returns
+   */
   async verifySoftwareToken(params: VerifySoftwareTokenRequest): Promise<VerifySoftwareTokenResponse> {
     return cognitoRequest(params, ServiceTarget.VerifySoftwareToken, this.cognitoEndpoint);
   }
@@ -1088,6 +1324,72 @@ export class CognitoClient {
     };
 
     await cognitoRequest(resendConfirmationCodeRequest, ServiceTarget.ResendConfirmationCode, this.cognitoEndpoint);
+  }
+
+  async startWebAuthnRegistration(
+    request: StartWebAuthnRegistrationRequest
+  ): Promise<StartWebAuthnRegistrationResponse> {
+    const response = await cognitoRequest(request, ServiceTarget.StartWebAuthnRegistration, this.cognitoEndpoint);
+
+    response.CredentialCreationOptions.challenge = base64UrlToUint8Array(
+      response.CredentialCreationOptions.challenge as any
+    );
+
+    response.CredentialCreationOptions.user.id = base64UrlToUint8Array(
+      response.CredentialCreationOptions.user.id as any
+    );
+
+    response.CredentialCreationOptions.excludeCredentials = (
+      response.CredentialCreationOptions.excludeCredentials || []
+    ).map((excludeCred: any) => ({
+      ...excludeCred,
+      id: base64UrlToUint8Array(excludeCred.id)
+    }));
+
+    return response;
+  }
+
+  /**
+   * Completes registration of a passkey authenticator for the currently signed-in user.
+   * @param request Request to complete WebAuthn registration.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.Credential The credential object returned by the WebAuthn API.
+   */
+  async completeWebAuthnRegistration(request: CompleteWebAuthnRegistrationRequest): Promise<void> {
+    await cognitoRequest(
+      {
+        AccessToken: request.AccessToken,
+        Credential: publicKeyCredentialToJSON(request.Credential)
+      },
+      ServiceTarget.CompleteWebAuthnRegistration,
+      this.cognitoEndpoint
+    );
+  }
+
+  /**
+   * Deletes a registered passkey, or WebAuthn, authenticator for the currently signed-in user.
+   *
+   * @param request Request to delete a WebAuthn credential.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.CredentialId The ID of the credential to delete.
+   */
+  async deleteWebAuthnCredential(request: DeleteWebAuthnCredentialRequest): Promise<void> {
+    await cognitoRequest(request, ServiceTarget.DeleteWebAuthnCredential, this.cognitoEndpoint);
+  }
+
+  /**
+   * Lists all registered WebAuthn credentials for the currently signed-in user.
+   *
+   * @param request Request to list WebAuthn credentials.
+   * @param request.AccessToken Access token of the current user.
+   * @param request.MaxResults Maximum number of credentials to return.
+   * @param request.NextToken Pagination token to continue listing credentials.
+   * @returns
+   */
+  async listWebAuthnCredentials(request: ListWebAuthnCredentialsRequest): Promise<ListWebAuthnCredentialsResponse> {
+    const response = await cognitoRequest(request, ServiceTarget.ListWebAuthnCredentials, this.cognitoEndpoint);
+
+    return response;
   }
 
   /**
