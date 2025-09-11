@@ -825,11 +825,6 @@ export class CognitoClient {
   }
 
   async initiateAuth(request: InitiateAuthRequest): Promise<InitiateAuthResponse> {
-    request.AuthParameters.SECRET_HASH =
-      this.clientSecret && request.AuthParameters.USERNAME
-        ? await calculateSecretHash(this.clientSecret, this.userPoolClientId, request.AuthParameters.USERNAME)
-        : undefined;
-
     const cognitoResponse = await cognitoRequest(
       {
         ...request,
