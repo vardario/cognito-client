@@ -453,16 +453,14 @@ export interface ListDevicesResponse {
 }
 
 /**
- * Cognito supported federated identities public providers.
- * @see https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-identity.html for more information.
+ * Cognito built in identity providers.
  */
-export enum IdentityProvider {
-  Cognito = 'COGNITO',
-  Google = 'Google',
-  Facebook = 'Facebook',
-  Amazon = 'LoginWithAmazon',
-  Apple = 'SignInWithApple'
-}
+export const IdentityProvider = {
+  Cognito: 'COGNITO',
+  Google: 'Google',
+  Facebook: 'Facebook',
+  Apple: 'SignInWithApple'
+};
 
 export interface AuthenticationResult {
   AccessToken: string;
@@ -1396,7 +1394,7 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async generateOAuthSignInUrl(identityProvider?: IdentityProvider) {
+  async generateOAuthSignInUrl(identityProvider?: string) {
     if (this.oAuth === undefined) {
       throw Error('You have to define oAuth options to use generateFederatedSignUrl');
     }
