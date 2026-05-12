@@ -100,7 +100,7 @@ describe('Cognito Client', () => {
 
   test('changePassword', async () => {
     const newPassword = 'newPassword';
-    expect(cognitoClient.authenticateUser(user.email, newPassword)).rejects.toThrow();
+    await expect(cognitoClient.authenticateUser(user.email, newPassword)).rejects.toThrow();
 
     const auth = await cognitoClient.authenticateUser(user.email, user.password);
 
@@ -110,7 +110,7 @@ describe('Cognito Client', () => {
 
     await cognitoClient.changePassword(user.password, newPassword, auth.AuthenticationResult.AccessToken);
     await cognitoClient.revokeToken(auth.AuthenticationResult.RefreshToken);
-    expect(cognitoClient.authenticateUser(user.email, user.password)).rejects.toThrow();
+    await expect(cognitoClient.authenticateUser(user.email, user.password)).rejects.toThrow();
     await cognitoClient.authenticateUser(user.email, newPassword);
   });
   test('generateOAuthSignInUrl', async () => {
@@ -205,7 +205,7 @@ describe('Cognito Client', () => {
       ]
     );
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -220,7 +220,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -235,7 +235,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -250,7 +250,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -265,7 +265,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -280,7 +280,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new InitAuthError('test', 'code' as InitiateAuthException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AuthFlow: 'CUSTOM_AUTH',
@@ -309,7 +309,7 @@ describe('Cognito Client', () => {
       }
     );
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ChallengeName: 'CUSTOM_CHALLENGE',
@@ -325,7 +325,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new RespondToAuthChallengeError('test', 'code' as RespondToAuthChallengeException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -337,7 +337,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new SignUpError('test', 'code' as SignUpException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -349,7 +349,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new ConfirmSignUpError('test', 'code' as ConfirmSignUpException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AccessToken: '',
@@ -361,7 +361,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new ChangePasswordError('test', 'code' as ChangePasswordException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -372,7 +372,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new RevokeTokenError('test', 'code' as RevokeTokenException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -383,7 +383,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new ForgotPasswordError('test', 'code' as ForgotPasswordException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -396,7 +396,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new ConfirmForgotPasswordError('test', 'code' as ConfirmForgotPasswordException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           ClientId: '',
@@ -407,7 +407,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new ResendConfirmationCodeError('test', 'code' as ResendConfirmationException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AccessToken: '',
@@ -418,7 +418,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new UpdateUserAttributesError('test', 'code' as UpdateUserAttributesException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AccessToken: '',
@@ -430,7 +430,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new VerifyUserAttributeError('test', 'code' as VerifyUserAttributeException));
 
-    expect(
+    await expect(
       cognitoRequest(
         {
           AccessToken: ''
@@ -440,7 +440,7 @@ describe('Cognito Client', () => {
       )
     ).rejects.toThrowError(new GlobalSignOutError('test', 'code' as GlobalSignOutException));
 
-    COMMON_EXCEPTIONS.forEach(exception => {
+    COMMON_EXCEPTIONS.forEach(async exception => {
       fetchMocker.mockResponse(
         JSON.stringify({
           message: 'test',
@@ -455,7 +455,7 @@ describe('Cognito Client', () => {
         }
       );
 
-      expect(
+      await expect(
         cognitoRequest(
           {
             ChallengeName: 'CUSTOM_CHALLENGE',
