@@ -225,6 +225,15 @@ export interface _RespondToAuthChallengeWebAuthnRequest extends RespondToAuthCha
   };
 }
 
+export interface _RespondToAuthChallengeEmailOtpRequest extends RespondToAuthChallengeBaseRequest {
+  ChallengeName: 'EMAIL_OTP';
+  ChallengeResponses: {
+    SECRET_HASH?: string;
+    EMAIL_OTP_CODE: string;
+    USERNAME: string;
+  };
+}
+
 type _RespondToAuthChallengeRequest =
   | _RespondToAuthChallengePasswordVerifierRequest
   | _RespondToAuthChallengeSmsMfaRequest
@@ -235,7 +244,8 @@ type _RespondToAuthChallengeRequest =
   | _RespondToAuthChallengeDevicePasswordVerifierRequest
   | _RespondToAuthChallengeMfaSetupRequest
   | _RespondToAuthChallengeSelectMfaTypeRequest
-  | _RespondToAuthChallengeWebAuthnRequest;
+  | _RespondToAuthChallengeWebAuthnRequest
+  | _RespondToAuthChallengeEmailOtpRequest;
 
 export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengePasswordVerifierRequest, 'ClientId'>
@@ -247,7 +257,8 @@ export type RespondToAuthChallengeRequest =
   | Omit<_RespondToAuthChallengeDevicePasswordVerifierRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeMfaSetupRequest, 'ClientId'>
   | Omit<_RespondToAuthChallengeSelectMfaTypeRequest, 'ClientId'>
-  | Omit<_RespondToAuthChallengeWebAuthnRequest, 'ClientId'>;
+  | Omit<_RespondToAuthChallengeWebAuthnRequest, 'ClientId'>
+  | Omit<_RespondToAuthChallengeEmailOtpRequest, 'ClientId'>;
 
 export interface UserAttribute {
   Name: string;
@@ -548,6 +559,16 @@ export interface InitAuthMfaSetupChallengeResponse extends InitiateAuthBaseRespo
   MFAS_CAN_SETUP: ('SMS_MFA' | 'SOFTWARE_TOKEN_MFA')[];
 }
 
+export interface InitAuthEmailOtpChallengeResponse extends InitiateAuthBaseResponse {
+  AuthenticationResult?: never;
+  ChallengeName: 'EMAIL_OTP';
+  ChallengeParameters: {
+    CODE_DELIVERY_DELIVERY_MEDIUM: string;
+    CODE_DELIVERY_DESTINATION: string;
+  };
+  Session: string;
+}
+
 export interface MfaOption {
   DeliveryMedium: 'SMS' | 'EMAIL';
   AttributeName: string;
@@ -622,7 +643,8 @@ export type InitiateAuthChallengeResponse =
   | InitAuthSelectChallengeResponse
   | InitAuthPasswordChallengeResponse
   | InitAuthPasswordSRPChallengeResponse
-  | InitAuthMfaSetupChallengeResponse;
+  | InitAuthMfaSetupChallengeResponse
+  | InitAuthEmailOtpChallengeResponse;
 
 export type InitiateAuthResponse =
   | InitiateAuthAuthenticationResponse
@@ -1177,6 +1199,14 @@ export class CognitoClient {
    * @returns
    */
   async respondToAuthChallenge(params: RespondToAuthChallengeRequest): Promise<InitiateAuthResponse> {
+    if (this.clientSecret && !params.ChallengeResponses.SECRET_HASH) {
+      params.ChallengeResponses.SECRET_HASH = await calculateSecretHash(
+        this.clientSecret,
+        this.userPoolClientId,
+        params.ChallengeResponses.USERNAME
+      );
+    }
+
     return cognitoRequest(
       {
         ...params,
