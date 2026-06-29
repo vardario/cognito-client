@@ -43,6 +43,7 @@ import {
   calculateSecretHash,
   calculateSignature,
   calculateU,
+  credentialCreateOptionsToPublicKey,
   decodeJwt,
   digest,
   generateA,
@@ -607,7 +608,7 @@ export interface StartWebAuthnRegistrationResponse {
 
 export interface CompleteWebAuthnRegistrationRequest {
   AccessToken: string;
-  Credential: PublicKeyCredential;
+  Credential: any; // PublicKeyCredentialJSON
 }
 
 export interface DeleteWebAuthnCredentialRequest {
@@ -623,7 +624,7 @@ export interface ListWebAuthnCredentialsRequest {
 
 export interface WebAuthnCredential {
   AuthenticatorTransports: string[];
-  CreatedAt: string;
+  CreatedAt: number;
   CredentialId: string;
   FriendlyCredentialName: string;
   RelyingPartyId: string;
@@ -845,14 +846,20 @@ export class CognitoClient {
   }
 
   async initiateAuth(request: InitiateAuthRequest): Promise<InitiateAuthResponse> {
-    const cognitoResponse = await cognitoRequest(
-      {
-        ...request,
-        ClientId: this.userPoolClientId
-      },
-      ServiceTarget.InitiateAuth,
-      this.cognitoEndpoint
-    );
+    const _request: _InitiateAuthRequest = {
+      ...request,
+      ClientId: this.userPoolClientId
+    };
+
+    if (this.clientSecret && request.AuthParameters.USERNAME) {
+      _request.AuthParameters.SECRET_HASH = await calculateSecretHash(
+        this.clientSecret,
+        this.userPoolClientId,
+        request.AuthParameters.USERNAME
+      );
+    }
+
+    const cognitoResponse = await cognitoRequest(_request, ServiceTarget.InitiateAuth, this.cognitoEndpoint);
 
     if (cognitoResponse.AuthenticationResult) {
       cognitoResponse.AuthenticationResult = adaptExpiresIn(cognitoResponse.AuthenticationResult);
@@ -879,9 +886,7 @@ export class CognitoClient {
       AuthFlow: 'USER_SRP_AUTH',
       AuthParameters: {
         USERNAME: username,
-        SRP_A: A.toString(16),
-        SECRET_HASH:
-          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+        SRP_A: A.toString(16)
       },
       ClientMetadata: {}
     });
@@ -917,14 +922,7 @@ export class CognitoClient {
         PASSWORD_CLAIM_SECRET_BLOCK: initUserSrpAuthResponse.ChallengeParameters.SECRET_BLOCK,
         PASSWORD_CLAIM_SIGNATURE: signature,
         USERNAME: initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP,
-        TIMESTAMP: timeStamp,
-        SECRET_HASH:
-          this.clientSecret &&
-          (await calculateSecretHash(
-            this.clientSecret,
-            this.userPoolClientId,
-            initUserSrpAuthResponse.ChallengeParameters.USER_ID_FOR_SRP
-          ))
+        TIMESTAMP: timeStamp
       },
       ClientMetadata: {}
     });
@@ -950,12 +948,9 @@ export class CognitoClient {
   async authenticateUser(username: string, password: string): Promise<InitiateAuthResponse> {
     const initiateAuthPayload: InitiateAuthRequest = {
       AuthFlow: 'USER_PASSWORD_AUTH',
-
       AuthParameters: {
         USERNAME: username,
-        PASSWORD: password,
-        SECRET_HASH:
-          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+        PASSWORD: password
       },
       ClientMetadata: {}
     };
@@ -1008,9 +1003,7 @@ export class CognitoClient {
       ChallengeName: 'WEB_AUTHN',
       ChallengeResponses: {
         USERNAME: username,
-        CREDENTIAL: JSON.stringify(publicKeyCredentialToJSON(credentials)),
-        SECRET_HASH:
-          this.clientSecret && (await calculateSecretHash(this.clientSecret, this.userPoolClientId, username))
+        CREDENTIAL: JSON.stringify(publicKeyCredentialToJSON(credentials))
       },
       Session: authResponse.Session
     });
@@ -1036,7 +1029,7 @@ export class CognitoClient {
     });
 
     const credentials = await navigator.credentials.create({
-      publicKey: CredentialCreationOptions
+      publicKey: credentialCreateOptionsToPublicKey(CredentialCreationOptions)
     });
 
     if (!(credentials instanceof PublicKeyCredential)) {
@@ -1045,7 +1038,7 @@ export class CognitoClient {
 
     await this.completeWebAuthnRegistration({
       AccessToken: accessToken,
-      Credential: credentials
+      Credential: publicKeyCredentialToJSON(credentials)
     });
   }
 
@@ -1199,7 +1192,7 @@ export class CognitoClient {
    * @returns
    */
   async respondToAuthChallenge(params: RespondToAuthChallengeRequest): Promise<InitiateAuthResponse> {
-    if (this.clientSecret && !params.ChallengeResponses.SECRET_HASH) {
+    if (this.clientSecret) {
       params.ChallengeResponses.SECRET_HASH = await calculateSecretHash(
         this.clientSecret,
         this.userPoolClientId,
@@ -1352,37 +1345,20 @@ export class CognitoClient {
   async startWebAuthnRegistration(
     request: StartWebAuthnRegistrationRequest
   ): Promise<StartWebAuthnRegistrationResponse> {
-    const response = await cognitoRequest(request, ServiceTarget.StartWebAuthnRegistration, this.cognitoEndpoint);
-
-    response.CredentialCreationOptions.challenge = base64UrlToUint8Array(
-      response.CredentialCreationOptions.challenge as any
-    );
-
-    response.CredentialCreationOptions.user.id = base64UrlToUint8Array(
-      response.CredentialCreationOptions.user.id as any
-    );
-
-    response.CredentialCreationOptions.excludeCredentials = (
-      response.CredentialCreationOptions.excludeCredentials || []
-    ).map((excludeCred: any) => ({
-      ...excludeCred,
-      id: base64UrlToUint8Array(excludeCred.id)
-    }));
-
-    return response;
+    return cognitoRequest(request, ServiceTarget.StartWebAuthnRegistration, this.cognitoEndpoint);
   }
 
   /**
    * Completes registration of a passkey authenticator for the currently signed-in user.
    * @param request Request to complete WebAuthn registration.
    * @param request.AccessToken Access token of the current user.
-   * @param request.Credential The credential object returned by the WebAuthn API.
+   * @param request.Credential The credential object returned by the WebAuthn API. You have to use publicKeyCredentialToJSON to convert the credential to a JSON object before sending it to Cognito.
    */
   async completeWebAuthnRegistration(request: CompleteWebAuthnRegistrationRequest): Promise<void> {
     await cognitoRequest(
       {
         AccessToken: request.AccessToken,
-        Credential: publicKeyCredentialToJSON(request.Credential)
+        Credential: request.Credential
       },
       ServiceTarget.CompleteWebAuthnRegistration,
       this.cognitoEndpoint

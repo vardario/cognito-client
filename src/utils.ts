@@ -75,6 +75,19 @@ export function publicKeyCredentialToJSON(cred: any): any {
   });
 }
 
+export function credentialCreateOptionsToPublicKey(credentialCreateOptions: any): PublicKeyCredentialCreationOptions {
+  credentialCreateOptions.challenge = base64UrlToUint8Array(credentialCreateOptions.challenge as any);
+  credentialCreateOptions.user.id = base64UrlToUint8Array(credentialCreateOptions.user.id as any);
+  credentialCreateOptions.excludeCredentials = (credentialCreateOptions.excludeCredentials || []).map(
+    (excludeCred: any) => ({
+      ...excludeCred,
+      id: base64UrlToUint8Array(excludeCred.id)
+    })
+  );
+
+  return credentialCreateOptions as PublicKeyCredentialCreationOptions;
+}
+
 const N = BigInt(
   '0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1' +
     '29024E088A67CC74020BBEA63B139B22514A08798E3404DD' +
