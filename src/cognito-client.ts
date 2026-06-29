@@ -39,10 +39,10 @@ import {
 } from './error.js';
 
 import {
-  base64UrlToUint8Array,
   calculateSecretHash,
   calculateSignature,
   calculateU,
+  createCredentialFromInitWebAuthResponse,
   credentialCreateOptionsToPublicKey,
   decodeJwt,
   digest,
@@ -976,27 +976,17 @@ export class CognitoClient {
       }
     };
 
-    const authResponse = await this.initiateAuth(webAuthnPayload);
+    const initWebAuthnReponse = await this.initiateAuth(webAuthnPayload);
 
-    if (authResponse.ChallengeName !== 'WEB_AUTHN') {
+    if (initWebAuthnReponse.ChallengeName !== 'WEB_AUTHN') {
       throw new InitAuthError(
-        'Authentication failed, expected WEB_AUTHN challenge but received: ' + authResponse.ChallengeName,
+        'Authentication failed, expected WEB_AUTHN challenge but received: ' + initWebAuthnReponse.ChallengeName,
         InitiateAuthException.InternalErrorException
       );
     }
 
-    const credentialRequestOptions = JSON.parse(authResponse.ChallengeParameters.CREDENTIAL_REQUEST_OPTIONS);
-
-    credentialRequestOptions.challenge = base64UrlToUint8Array(credentialRequestOptions.challenge);
-    credentialRequestOptions.allowCredentials = (credentialRequestOptions.allowCredentials || []).map(
-      (allowCred: any) => ({
-        ...allowCred,
-        id: base64UrlToUint8Array(allowCred.id)
-      })
-    );
-
     const credentials = await navigator.credentials.get({
-      publicKey: credentialRequestOptions
+      publicKey: createCredentialFromInitWebAuthResponse(initWebAuthnReponse)
     });
 
     const challengeResponse = await this.respondToAuthChallenge({
@@ -1005,7 +995,7 @@ export class CognitoClient {
         USERNAME: username,
         CREDENTIAL: JSON.stringify(publicKeyCredentialToJSON(credentials))
       },
-      Session: authResponse.Session
+      Session: initWebAuthnReponse.Session
     });
 
     if (challengeResponse.AuthenticationResult) {
