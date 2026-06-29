@@ -719,14 +719,6 @@ type CognitoRequestMap = {
   [ServiceTarget.ListWebAuthnCredentials]: ListWebAuthnCredentialsRequest;
 };
 
-export function adaptExpiresIn(auth: AuthenticationResult) {
-  // Cognito returns expiresIn in seconds, but we want it in milliseconds from now
-  return {
-    ...auth,
-    ExpiresIn: new Date().getTime() + auth.ExpiresIn * 1000
-  };
-}
-
 export async function cognitoRequest<T extends ServiceTarget>(
   body: CognitoRequestMap[T],
   serviceTarget: T,
@@ -860,11 +852,6 @@ export class CognitoClient {
     }
 
     const cognitoResponse = await cognitoRequest(_request, ServiceTarget.InitiateAuth, this.cognitoEndpoint);
-
-    if (cognitoResponse.AuthenticationResult) {
-      cognitoResponse.AuthenticationResult = adaptExpiresIn(cognitoResponse.AuthenticationResult);
-    }
-
     return cognitoResponse;
   }
 
@@ -926,12 +913,6 @@ export class CognitoClient {
       },
       ClientMetadata: {}
     });
-
-    if (passwordAuthChallengeResponse.AuthenticationResult) {
-      passwordAuthChallengeResponse.AuthenticationResult = adaptExpiresIn(
-        passwordAuthChallengeResponse.AuthenticationResult
-      );
-    }
 
     return passwordAuthChallengeResponse;
   }
@@ -997,10 +978,6 @@ export class CognitoClient {
       },
       Session: initWebAuthnReponse.Session
     });
-
-    if (challengeResponse.AuthenticationResult) {
-      challengeResponse.AuthenticationResult = adaptExpiresIn(challengeResponse.AuthenticationResult);
-    }
 
     return challengeResponse;
   }
@@ -1472,12 +1449,12 @@ export class CognitoClient {
       throw new Error(error);
     }
 
-    return adaptExpiresIn({
+    return {
       AccessToken: access_token,
       RefreshToken: refresh_token,
       IdToken: id_token,
       ExpiresIn: expires_in
-    });
+    };
   }
 
   /**
