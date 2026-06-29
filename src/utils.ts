@@ -1,4 +1,5 @@
 import * as bigIntMath from './bigint-math.js';
+import { InitiateAuthWebAuthResponse } from './cognito-client.js';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -73,6 +74,33 @@ export function publicKeyCredentialToJSON(cred: any): any {
     },
     type: cred.type
   });
+}
+
+export function credentialCreateOptionsToPublicKey(credentialCreateOptions: any): PublicKeyCredentialCreationOptions {
+  credentialCreateOptions.challenge = base64UrlToUint8Array(credentialCreateOptions.challenge as any);
+  credentialCreateOptions.user.id = base64UrlToUint8Array(credentialCreateOptions.user.id as any);
+  credentialCreateOptions.excludeCredentials = (credentialCreateOptions.excludeCredentials || []).map(
+    (excludeCred: any) => ({
+      ...excludeCred,
+      id: base64UrlToUint8Array(excludeCred.id)
+    })
+  );
+
+  return credentialCreateOptions as PublicKeyCredentialCreationOptions;
+}
+
+export function createCredentialFromInitWebAuthResponse(reposne: InitiateAuthWebAuthResponse) {
+  const credentialRequestOptions = JSON.parse(reposne.ChallengeParameters.CREDENTIAL_REQUEST_OPTIONS);
+
+  credentialRequestOptions.challenge = base64UrlToUint8Array(credentialRequestOptions.challenge);
+  credentialRequestOptions.allowCredentials = (credentialRequestOptions.allowCredentials || []).map(
+    (allowCred: any) => ({
+      ...allowCred,
+      id: base64UrlToUint8Array(allowCred.id)
+    })
+  );
+
+  return credentialRequestOptions as PublicKeyCredentialCreationOptions;
 }
 
 const N = BigInt(
