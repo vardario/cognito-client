@@ -298,32 +298,6 @@ export interface ResendConfirmationCodeRequest extends CognitoBaseRequest {
   SecretHash?: string;
 }
 
-/**
- * Cognito related OAuth props.
- */
-export interface OAuth2Props {
-  /**
-   * Cognito domain for OAuth2 token endpoints.
-   */
-  cognitoDomain: string;
-
-  /**
-   * Requested OAuth scopes
-   * @example ['email', 'openid']
-   */
-  scopes: string[];
-
-  /**
-   * Redirect URL after a successful OAuth2 authentication.
-   */
-  redirectUrl: string;
-
-  /**
-   * Response type.
-   */
-  responseType: 'code';
-}
-
 export interface CognitoClientProps {
   /**
    * Cognito User Pool ID
@@ -337,15 +311,15 @@ export interface CognitoClientProps {
   userPoolClientId: string;
 
   /**
+   * Cognito Domain. Required for OAuth2 flows.
+   */
+  cognitoDomain?: string;
+
+  /**
    * Optional Cognito endpoint. Useful for local testing.
    * If not defined the endpoint will be determined by @see userPoolId .
    */
   endpoint?: string;
-
-  /**
-   * Cognito OAuth related options. See @see OAuthProps .
-   */
-  oAuth2?: OAuth2Props;
 
   /**
    * Optional Cognito User Pool Client Secret.
@@ -814,18 +788,18 @@ export async function cognitoRequest(body: object, serviceTarget: ServiceTarget,
  */
 export class CognitoClient {
   private readonly cognitoEndpoint: string;
+  private readonly cognitoDomain?: string;
   private readonly cognitoPoolName: string;
   private readonly userPoolClientId: string;
-  private readonly oAuth?: OAuth2Props;
   private readonly clientSecret?: string;
 
-  constructor({ userPoolId, userPoolClientId, endpoint, oAuth2: oAuth, clientSecret }: CognitoClientProps) {
+  constructor({ userPoolId, userPoolClientId, endpoint, clientSecret, cognitoDomain }: CognitoClientProps) {
     const [cognitoPoolRegion, cognitoPoolName] = userPoolId.split('_');
     this.cognitoEndpoint = (endpoint || `https://cognito-idp.${cognitoPoolRegion}.amazonaws.com`).replace(/\/$/, '');
     this.cognitoPoolName = cognitoPoolName;
     this.userPoolClientId = userPoolClientId;
-    this.oAuth = oAuth;
     this.clientSecret = clientSecret;
+    this.cognitoDomain = cognitoDomain;
   }
 
   static getDecodedTokenFromSession(auth: AuthenticationResult): DecodedTokens {
@@ -1367,11 +1341,15 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async generateOAuthSignInUrl(identityProvider?: string) {
-    if (this.oAuth === undefined) {
-      throw Error('You have to define oAuth options to use generateFederatedSignUrl');
-    }
-
+  async generateOAuthSignInUrl({
+    identityProvider,
+    redirectUri,
+    scope
+  }: {
+    identityProvider?: string;
+    redirectUri: string;
+    scope: string[];
+  }) {
     const state = (await randomBytes(32)).toString('hex');
     const pkce = (await randomBytes(128)).toString('hex');
 
@@ -1382,17 +1360,17 @@ export class CognitoClient {
 
     const queryParams = new URLSearchParams();
 
-    queryParams.append('redirect_uri', this.oAuth.redirectUrl);
-    queryParams.append('response_type', this.oAuth.responseType);
+    queryParams.append('redirect_uri', redirectUri);
+    queryParams.append('response_type', 'code');
     queryParams.append('client_id', this.userPoolClientId);
     identityProvider && queryParams.append('identity_provider', identityProvider);
-    queryParams.append('scope', this.oAuth.scopes.join(' '));
+    queryParams.append('scope', scope.join(' '));
     queryParams.append('state', state);
     queryParams.append('code_challenge', code_challenge);
     queryParams.append('code_challenge_method', 'S256');
 
     return {
-      url: `${this.oAuth.cognitoDomain}/oauth2/authorize?${queryParams.toString()}`,
+      url: `${this.cognitoDomain}/oauth2/authorize?${queryParams.toString()}`,
       state,
       pkce
     };
@@ -1409,16 +1387,26 @@ export class CognitoClient {
    *
    * @throws {Error}
    */
-  async handleCodeFlow(returnUrl: string, pkce: string, state: string): Promise<AuthenticationResult> {
-    if (this.oAuth === undefined) {
-      throw Error('You have to define oAuth options to use handleCodeFlow');
-    }
-
+  async handleCodeFlow({
+    pkce,
+    redirectUri,
+    returnUrl,
+    state
+  }: {
+    returnUrl: string;
+    redirectUri: string;
+    pkce: string;
+    state: string;
+  }): Promise<AuthenticationResult> {
     const url = new URL(returnUrl);
     const code = url.searchParams.get('code');
 
     if (code === null) {
       throw Error('code parameter is missing from return url.');
+    }
+
+    if (!this.cognitoDomain) {
+      throw Error('Cognito domain is not set. Please set cognitoDomain in the CognitoClient constructor.');
     }
 
     if (url.searchParams.get('state') !== state) {
@@ -1430,16 +1418,23 @@ export class CognitoClient {
     urlParams.append('grant_type', 'authorization_code');
     urlParams.append('code', code);
     urlParams.append('client_id', this.userPoolClientId);
-    urlParams.append('redirect_uri', this.oAuth.redirectUrl);
+    urlParams.append('redirect_uri', redirectUri);
     urlParams.append('code_verifier', pkce);
 
-    const tokenEndpoint = `${this.oAuth.cognitoDomain}/oauth2/token`;
+    const tokenEndpoint = `${this.cognitoDomain}/oauth2/token`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+
+    if (this.clientSecret) {
+      const basicAuth = btoa(`${this.userPoolClientId}:${this.clientSecret}`);
+      headers['Authorization'] = `Basic ${basicAuth}`;
+    }
 
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers,
       body: urlParams.toString()
     });
 

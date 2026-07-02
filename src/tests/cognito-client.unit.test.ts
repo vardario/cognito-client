@@ -1,6 +1,6 @@
 import 'isomorphic-fetch';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import { CognitoClient, IdentityProvider, ServiceTarget, OAuth2Props, cognitoRequest } from '../cognito-client.js';
+import { CognitoClient, IdentityProvider, ServiceTarget, cognitoRequest } from '../cognito-client.js';
 import { newUser, setupCognito, user } from './test-utils.js';
 import { expect, test, describe, beforeAll, afterAll } from 'vitest';
 import { vi } from 'vitest';
@@ -43,7 +43,7 @@ describe('Cognito Client', () => {
   let cognitoClient: CognitoClient;
   let container: StartedTestContainer;
 
-  const oAuth2: OAuth2Props = {
+  const oAuth2 = {
     cognitoDomain: 'http://localhost',
     redirectUrl: 'http://localhost',
     responseType: 'code',
@@ -68,7 +68,7 @@ describe('Cognito Client', () => {
       userPoolClientId: userPoolClient.ClientId!,
       clientSecret: userPoolClient.ClientSecret!,
       endpoint: cognitoEndpoint,
-      oAuth2: oAuth2
+      cognitoDomain: oAuth2.cognitoDomain
     });
 
     await cognitoClient.authenticateUser(user.email, user.password);
@@ -114,8 +114,13 @@ describe('Cognito Client', () => {
     await cognitoClient.authenticateUser(user.email, newPassword);
   });
   test('generateOAuthSignInUrl', async () => {
-    const _test = async (cb: (searchParams: URLSearchParams) => void, identityProvider?: IdentityProvider) => {
-      const { url, state } = await cognitoClient.generateOAuthSignInUrl(identityProvider);
+    const _test = async (cb: (searchParams: URLSearchParams) => void, identityProvider?: string) => {
+      const { url, state } = await cognitoClient.generateOAuthSignInUrl({
+        identityProvider,
+        redirectUri: oAuth2.redirectUrl,
+        scope: oAuth2.scopes
+      });
+
       const { searchParams } = new URL(url);
 
       expect(searchParams.get('redirect_uri')).toBe(oAuth2.redirectUrl);
