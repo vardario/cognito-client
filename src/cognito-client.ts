@@ -52,7 +52,8 @@ import {
   publicKeyCredentialToJSON,
   randomBytes,
   uint8ArrayFromString,
-  uint8ArrayToBase64String
+  uint8ArrayToBase64String,
+  uint8ArrayToHexString
 } from './utils.js';
 
 export interface CognitoBaseRequest {
@@ -1350,8 +1351,8 @@ export class CognitoClient {
     redirectUri: string;
     scope: string[];
   }) {
-    const state = (await randomBytes(32)).toString('hex');
-    const pkce = (await randomBytes(128)).toString('hex');
+    const state = uint8ArrayToHexString(await randomBytes(32));
+    const pkce = uint8ArrayToHexString(await randomBytes(128));
 
     const code_challenge = uint8ArrayToBase64String(await digest('SHA-256', uint8ArrayFromString(pkce)))
       .replace(/\+/g, '-')
