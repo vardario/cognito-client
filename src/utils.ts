@@ -163,7 +163,7 @@ export async function hashBuffer(buffer: Uint8Array) {
 }
 
 export async function generateSmallA() {
-  return BigInt('0x' + (await randomBytes(128)).toString('hex'));
+  return BigInt('0x' + uint8ArrayToHexString(await randomBytes(128)));
 }
 
 export function generateA(smallA: bigint) {
@@ -236,15 +236,16 @@ export async function calculateSignature(
 
 export function decodeJwt<T = unknown>(jwt: string) {
   const [header, payload, signature] = jwt.split('.');
+  const textDecoder = new TextDecoder();
   return {
-    header: JSON.parse(Buffer.from(header, 'base64').toString('utf-8')),
-    payload: JSON.parse(Buffer.from(payload, 'base64').toString('utf-8')) as T,
+    header: JSON.parse(textDecoder.decode(base64UrlToUint8Array(header))),
+    payload: JSON.parse(textDecoder.decode(base64UrlToUint8Array(payload))) as T,
     signature: signature
   };
 }
 
 export async function randomBytes(num: number) {
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(num)));
+  return crypto.getRandomValues(new Uint8Array(num));
 }
 
 export function formatTimestamp(date: Date) {
