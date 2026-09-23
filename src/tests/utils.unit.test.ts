@@ -5,12 +5,16 @@ import {
   calculateSecretHash,
   calculateSignature,
   calculateU,
+  decodeJwt,
   formatTimestamp,
   generateA,
   getPasswordAuthenticationKey,
   hashBuffer,
   hashHexString,
-  padHex
+  padHex,
+  randomBytes,
+  uint8ArrayFromString,
+  uint8ArrayToBase64UrlString
 } from '../utils';
 
 describe('Utils Test', () => {
@@ -93,5 +97,24 @@ describe('Utils Test', () => {
   test('calculateSecretHash', async () => {
     const hash = await calculateSecretHash('clientSecret', 'clientId', 'username');
     expect(hash).toBe('vH5prJR/bHEh4xqtNXGUBICLyh4AkiNCkefVf8h3VHs=');
+  });
+
+  test('decodeJwt', () => {
+    const header = { alg: 'none', typ: 'JWT' };
+    const payload = { name: 'J\u00f6hn D\u00f6e' };
+    const encode = (value: unknown) => uint8ArrayToBase64UrlString(uint8ArrayFromString(JSON.stringify(value)));
+
+    expect(decodeJwt(`${encode(header)}.${encode(payload)}.signature`)).toStrictEqual({
+      header,
+      payload,
+      signature: 'signature'
+    });
+  });
+
+  test('randomBytes', async () => {
+    const bytes = await randomBytes(32);
+
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect(bytes).toHaveLength(32);
   });
 });
